@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Home Page</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      color: #1e293b;
+      padding: 20px;
+    }
+
+    header {
+      background: #1e3a8a;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 12px;
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .profile img {
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+    }
+
+    .info h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logout-btn {
+      padding: 10px 18px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+
+    .hamburger {
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    .menu-content {
+      display: none;
+      position: absolute;
+      top: 90px;
+      right: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 260px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+    }
+
+    .menu-content a {
+      display: block;
+      padding: 14px;
+      text-decoration: none;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    .menu-content a:hover {
+      background: #e5e7eb;
+    }
+
+    h3 {
+      margin-top: 30px;
+      font-size: 20px;
+      border-left: 6px solid #3b82f6;
+      padding-left: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #2563eb;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f1f5f9;
+    }
+
+    tr:hover {
+      background-color: #e2e8f0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .card h4 {
+      margin-bottom: 10px;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .btn-option {
+      background: #3b82f6;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-weight: 500;
+    }
+
+    .btn-option:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="profile">
+      <img src="https://tse4.mm.bing.net/th/id/OIP.icRntapo_CZpFI2-WEo_YgHaHn?pid=Api&P=0&h=180" alt="Profile" />
+      <div class="info">
+        <h2><%= name %></h2>
+        <p><strong>Email:</strong> <%= email %></p>
+        <p><strong>Role:</strong> Faculty</p>
+      </div>
+    </div>
+
+    <div class="top-right">
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <h4>⚙️ Quick Actions</h4>
+    <div class="btn-group">
+      <button class="btn-option">Block / Unblock ID</button>
+      <button class="btn-option">Reset Email / Password</button>
+      <button class="btn-option">Change SVVNET ID</button>
+      
+      <form action="/substitution" method="get" style="display: inline;">
+        <button type="submit" style="background-color: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">
+          Request for Substitution (Lecture/Lab)
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+<div class="card">
+  <table>
+    <div class="card">
+  <h3>📅 Your Timetable</h3>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Batch</th><th>Subject</th></tr>
+    </thead>
+    <tbody id="todayTimetable"></tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3>📚 Substitution History</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>From</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Batch</th>
+        <th>Subject</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="historyTable">
+      <tr><td colspan="6">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+  </table>
+</div>
+
+    </table>
+  </div>
+
+<script>
+  async function loadTodayTimetable() {
+    const res = await fetch("/timetable/today");
+    const data = await res.json();
+    const tbody = document.getElementById("todayTimetable");
+    tbody.innerHTML = "";
+
+    if (data.timetable.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3">No classes scheduled for today</td></tr>`;
+      return;
+    }
+
+    data.timetable.forEach(slot => {
+      const row = `<tr>
+        <td>${slot.time}</td>
+        <td>${slot.batch}</td>
+        <td>${slot.subject}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+  }
+
+  loadTodayTimetable();
+  
+    function toggleMenu() {
+      const menu = document.getElementById("menuBox");
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+
+    async function logout() {
+        await fetch("/logout");
+        location.reload();
+    }
+
+    async function loadHistory() {
+      const res = await fetch("/substitution-history");
+      const data = await res.json();
+      const tbody = document.getElementById("historyTable");
+      tbody.innerHTML = "";
+
+      if (!data.history || data.history.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No substitution history found</td></tr>`;
+        return;
+      }
+
+      data.history.forEach(entry => {
+        const row = `<tr>
+          <td>${entry.teacher}</td>
+          <td>${entry.date}</td>
+          <td>${entry.time}</td>
+          <td>${entry.batch}</td>
+          <td>${entry.subject}</td>
+          <td>Accepted by ${entry.substitute}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+  loadHistory();
+
+
+</script>
+</body>
+</html>

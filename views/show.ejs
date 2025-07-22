@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Panel</title>
+  <style>
+        * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #667eea, f9f9f9);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #loginSection {
+      width: 100%;
+      max-width: 400px;
+      padding: 40px;
+      background-color: #ffffff;
+      border-radius: 15px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333333;
+      margin-bottom: 30px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 15px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    input:focus {
+      border-color: #667eea;
+      outline: none;
+      box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #667eea;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #5a67d8;
+    }
+
+    #loginMessage {
+      color: #e53e3e;
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginSection">
+  <h2>Teacher Login</h2>
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Username" required><br><br>
+    <input type="password" id="password" placeholder="Password" required><br><br>
+    <button type="submit">Login</button>
+  </form>
+  <p id="loginMessage" style="color:red;"></p>
+</div>
+
+<script>
+  const waitForBackend = async () => {
+    let retries = 5;
+    while (retries--) {
+      try {
+        const res = await fetch("http://localhost:4000/health");
+        const data = await res.json();
+        if (data.connected) return true;
+      } catch (err) {
+        console.log("⏳ Waiting for backend...");
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    return false;
+  };
+
+  window.onload = async () => {
+  const res = await fetch('/health');
+  const data = await res.json();
+  if (!data.connected) {
+    document.getElementById("loginMessage").innerText = "⚠️ Server not ready. Try again later.";
+  }
+};
+
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = "/home";  
+    } else {
+      document.getElementById("loginMessage").innerText = data.message;
+    }
+  } catch (err) {
+    document.getElementById("loginMessage").innerText = "Server is not responding. Try again soon.";
+  }
+});
+</script>
+
+</body>
+</html>
