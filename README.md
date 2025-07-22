@@ -1,4 +1,4 @@
-This project is a full-stack web application designed to automate and  streamline the teacher substitution process in educational institutions. It helps manage teacher unavailability, sends substitution requests, and updates timetables in real time.
+A web application designed to automate and  streamline the teacher substitution process in educational institutions. It helps manage teacher unavailability, sends substitution requests, and updates timetables in real time.
 
 Tools Used 
 - Node.js & Express : Backend server handling routes and logic 
