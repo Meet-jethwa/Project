@@ -12,7 +12,7 @@ if (!uri) {
 
 const teacherData = {
   Ahuja: {
-    email: 'unknown1569566@gmail.com',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Monday', time: '10:00 - 11:00', batch: 'Batch A', subject: 'DBMS' },
@@ -25,7 +25,7 @@ const teacherData = {
     ]
   },
   Raina: {
-    email: 'unknown1569566@gmail.com',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Monday', time: '11:00 - 12:00', batch: 'Batch A', subject: 'WPL' },
@@ -37,7 +37,7 @@ const teacherData = {
     ]
   },
   Patel: {
-    email: 'unknown1569566@gmail.com',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Monday', time: '10:00 - 11:00', batch: 'Batch B', subject: 'WPL' },
@@ -49,7 +49,7 @@ const teacherData = {
     ]
   },
   Khushi: {
-    email: 'khushijethwa03@gmail.com',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Monday', time: '11:00 - 12:00', batch: 'Batch B', subject: 'DS' },
