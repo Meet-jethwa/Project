@@ -15,7 +15,7 @@ const studentData = [
   {
     name: 'Raj',
     batch: 'Batch A',
-    email: 'jethwa.mb@somaiya.edu',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Monday', time: '10:00 - 11:00', subject: 'DBMS', teacher: 'Ahuja' },
@@ -26,7 +26,7 @@ const studentData = [
   {
     name: 'Simran',
     batch: 'Batch B',
-    email: 'meetjethwa212@gmail.com',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Tuesday', time: '10:00 - 11:00', subject: 'CN', teacher: 'Patel' },
@@ -37,7 +37,7 @@ const studentData = [
   {
     name: 'Meet',
     batch: 'Batch C',
-    email: 'meetjethwa489@gmail.com',
+    email: 'example@gmail.com',
     password: 'password',
     timetable: [
       { day: 'Tuesday', time: '02:00 - 03:00', subject: 'DBMS', teacher: 'Raina' },
@@ -47,17 +47,6 @@ const studentData = [
   }
 ];
 
-// mongoose.connect('mongodb://localhost:27017/teachers', {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true
-// }).then(async () => {
-//   await Student.deleteMany({});
-//   await Student.insertMany(studentData);
-//   console.log("✅ Students seeded successfully");
-//   mongoose.connection.close();
-// }).catch(err => {
-//   console.error("❌ Error seeding students:", err);
-// });
 
 async function seedData() {
   try {
