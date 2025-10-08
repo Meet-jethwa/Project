@@ -15,7 +15,23 @@ console.log(typeof Request.find);
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.set('trust proxy', 1);
+const allowedOrigins = [
+  'https://project-si3z.onrender.com',
+  'http://localhost:3000' // for local testing
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(bodyParser.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'secret-key',
@@ -27,8 +43,8 @@ app.use(session({
   }),
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    secure: true,
+    sameSite: 'none',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
@@ -132,7 +148,11 @@ mongoose.connect(uri, { dbName: 'teachers' })
 
       if (teacher && teacher.password === password) {
         req.session.teacher = teacher.name;
-        return res.json({ success: true, teacher: teacher.name });
+        if (teacher && teacher.password === password) {
+          req.session.teacher = teacher.name;
+          return res.redirect('/home');  // instead of sending JSON
+        }
+
       }
 
       console.log("Invalid credentials");
