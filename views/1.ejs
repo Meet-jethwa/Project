@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Login Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #eef2f3;
+      padding: 30px;
+    }
+    #loginSection, #teacherPanel {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #teacherPanel { display: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table, th, td { border: 1px solid #999; }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginSection">
+  <h2>Teacher Login</h2>
+  <form id="loginForm">
+    <input type="text" id="username" placeholder="Username" required><br><br>
+    <input type="password" id="password" placeholder="Password" required><br><br>
+    <button type="submit">Login</button>
+  </form>
+  <p id="loginMessage" style="color:red;"></p>
+</div>
+
+<div id="teacherPanel">
+  <h2>Welcome, <span id="teacherName"></span></h2>
+  <button onclick="logout()">Logout</button>
+
+  <h3>Your Timetable</h3>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Batch</th><th>Subject</th></tr>
+    </thead>
+    <tbody id="teacherTimetable"></tbody>
+  </table>
+
+  <h3>Mark Unavailability</h3>
+  <form id="unavailForm">
+    <label>Date: <input type="date" id="unavailDate" required></label><br><br>
+    <label>Time: <input type="time" id="unavailTime" required></label><br><br>
+    <label>Batch:
+      <select id="unavailBatch">
+        <option value="Batch A">A</option>
+        <option value="Batch B">B</option>
+        <option value="Batch C">C</option>
+      </select>
+    </label><br><br>
+    <label>Subject: <input type="text" id="unavailSubject" required></label><br><br>
+    <button type="submit">Send Substitution Request</button>
+  </form>
+  <p id="subMsg" style="color: green;"></p>
+
+  <h3>Substitution Requests</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>From</th><th>Date</th><th>Time</th><th>Batch</th><th>Subject</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="requestsBody"></tbody>
+  </table>
+
+  <h3>Your Sent Substitution Requests</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th><th>Time</th><th>Batch</th><th>Subject</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="sentRequestsBody"></tbody>
+  </table>
+
+
+  <h3>Substitution History</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>From</th><th>Date</th><th>Time</th><th>Batch</th><th>Subject</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+
+</div>
+
+
+<script>
+let currentTeacher = "";
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const data = await res.json();
+  if (data.success) {
+    currentTeacher = data.teacher;
+    document.getElementById("teacherName").innerText = currentTeacher;
+    document.getElementById("loginSection").style.display = "none";
+    document.getElementById("teacherPanel").style.display = "block";
+    loadTimetable();
+    loadRequests();
+    loadSentRequests();
+  } else {
+    document.getElementById("loginMessage").innerText = data.message;
+  }
+});
+
+async function loadTimetable() {
+  const res = await fetch("/timetable");
+  const data = await res.json();
+  const tbody = document.getElementById("teacherTimetable");
+  tbody.innerHTML = "";
+
+  data.timetable.forEach(slot => {
+    const row = `<tr>
+      <td>${slot.time}</td>
+      <td>${slot.batch}</td>
+      <td>${slot.subject}</td>
+    </tr>`;
+    tbody.innerHTML += row;
+  });
+}
+
+async function logout() {
+  await fetch("/logout");
+  location.reload();
+}
+
+document.getElementById("unavailForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const date = document.getElementById("unavailDate").value;
+  const time = document.getElementById("unavailTime").value;
+  const batch = document.getElementById("unavailBatch").value;
+  const subject = document.getElementById("unavailSubject").value;
+
+  const res = await fetch("/unavailable", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ date, time, batch, subject }),
+  });
+
+  const data = await res.json();
+  document.getElementById("subMsg").innerText = data.message || data.error;
+  document.getElementById("unavailForm").reset();
+  loadRequests();
+  loadSentRequests();
+});
+
+async function loadRequests() {
+  const res = await fetch("/substitute-requests");
+  const data = await res.json();
+  const tbody = document.getElementById("requestsBody");
+  const historyBody = document.getElementById("historyBody");
+  tbody.innerHTML = "";
+  historyBody.innerHTML = "";
+
+  data.requests.forEach(req => {
+    const row = document.createElement("tr");
+
+    if (req.status === "pending") {
+      row.innerHTML = `
+        <td>${req.teacher}</td>
+        <td>${req.date}</td>
+        <td>${req.time}</td>
+        <td>${req.batch}</td>
+        <td>${req.subject}</td>
+        <td>
+          <button onclick="respondToRequest(${req.id}, true)">Accept</button>
+          <button onclick="respondToRequest(${req.id}, false)">Decline</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    } else {
+      row.innerHTML = `
+        <td>${req.teacher}</td>
+        <td>${req.date}</td>
+        <td>${req.time}</td>
+        <td>${req.batch}</td>
+        <td>${req.subject}</td>
+        <td>${req.status}</td>
+      `;
+      historyBody.appendChild(row);
+    }
+  });
+}
+
+async function respondToRequest(id, agree) {
+  const res = await fetch("/respond", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requestId: id, agree }),
+  });
+  const data = await res.json();
+  alert(data.message);
+  loadRequests();
+  loadSentRequests();
+}
+
+async function loadSentRequests() {
+  const res = await fetch("/sent-requests");
+  const data = await res.json();
+  const tbody = document.getElementById("sentRequestsBody");
+  tbody.innerHTML = "";
+
+  data.sent.forEach(req => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${req.date}</td>
+      <td>${req.time}</td>
+      <td>${req.batch}</td>
+      <td>${req.subject}</td>
+      <td>${req.status}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+</script>
+
+
+</body>
+</html>

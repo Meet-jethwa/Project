@@ -1,0 +1,14 @@
+const mongoose = require('mongoose');
+
+const substitutionHistorySchema = new mongoose.Schema({
+  teacher: String,
+  substitute: String,
+  date: String,
+  time: String,
+  batch: String,
+  subject: String,
+  status: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('SubstitutionHistory', substitutionHistorySchema);
