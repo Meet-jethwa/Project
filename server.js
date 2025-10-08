@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const bodyParser = require('body-parser');
+const MongoStore = require("connect-mongo");
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -20,6 +21,10 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'secret-key',
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI, // from your .env
+    ttl: 14 * 24 * 60 * 60 // = 14 days
+  }),
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -258,12 +263,12 @@ mongoose.connect(uri, { dbName: 'teachers' })
             let acceptedSubject = subject;
             if (reqDoc.allowAny) {
                 const substituteTeacher = await Teacher.findOne({ name: sub });
-                const timetableEntry = await Timetable.findOne({
-                    teacher: sub,
-                    day: new Date(date).toLocaleDateString('en-US', { weekday: 'long' }),
-                    time,
-                    batch
-                });
+                const timetableEntry = acceptingTeacher.timetable.find(slot =>
+                  slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
+                  slot.time === reqDoc.time &&
+                  slot.batch === reqDoc.batch
+                );
+
                 acceptedSubject = timetableEntry?.subject || substituteTeacher?.subject || subject;
             }
 
@@ -367,12 +372,12 @@ mongoose.connect(uri, { dbName: 'teachers' })
 
             let acceptedSubject = reqDoc.subject;
             if (reqDoc.allowAny) {
-                const timetableEntry = await Timetable.findOne({
-                    teacher: teacherName,
-                    day: new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }),
-                    time: reqDoc.time,
-                    batch: reqDoc.batch
-                });
+                const timetableEntry = acceptingTeacher.timetable.find(slot =>
+                  slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
+                  slot.time === reqDoc.time &&
+                  slot.batch === reqDoc.batch
+                );
+
                 acceptedSubject = timetableEntry?.subject || acceptingTeacher.subject;
             }
 
