@@ -237,7 +237,12 @@
 
 <script>
   async function loadTodayTimetable() {
-    const res = await fetch("/timetable/today");
+    const res = await fetch('https://project-backend.onrender.com/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
     const data = await res.json();
     const tbody = document.getElementById("todayTimetable");
     tbody.innerHTML = "";
