@@ -243,8 +243,9 @@ mongoose.connect(uri, { dbName: 'teachers' })
             });
             await newRequest.save();
 
-            const acceptLink = `http://localhost:4000/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/accept`;
-            const denyLink = `http://localhost:4000/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/deny`;
+            const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+            const acceptLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/accept`;
+            const denyLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/deny`;
 
             await transporter.sendMail({
             from: process.env.EMAIL_USER,
