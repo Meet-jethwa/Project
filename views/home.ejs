@@ -236,52 +236,6 @@
   </div>
 
 <script>
-  // async function loadTodayTimetable() {
-  //   const res = await fetch('https://project-backend.onrender.com/api/timetable', {
-  //     credentials: 'include'
-  //   });
-
-  //   const data = await res.json();
-  //   const tbody = document.getElementById("todayTimetable");
-  //   tbody.innerHTML = "";
-
-  //   if (data.timetable.length === 0) {
-  //     tbody.innerHTML = `<tr><td colspan="3">No classes scheduled for today</td></tr>`;
-  //     return;
-  //   }
-
-  //   data.timetable.forEach(slot => {
-  //     const row = `<tr>
-  //       <td>${slot.time}</td>
-  //       <td>${slot.batch}</td>
-  //       <td>${slot.subject}</td>
-  //     </tr>`;
-  //     tbody.innerHTML += row;
-  //   });
-  // }
-  
-  document.querySelector('#loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const username = document.querySelector('input[name="username"]').value;
-      const password = document.querySelector('input[name="password"]').value;
-
-      fetch('https://project-si3z.onrender.com', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-        credentials: 'include'
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          window.location.href = 'https://project-si3z.onrender.com/home'; 
-        } else {
-          alert(data.message);
-        }
-      })
-      .catch(() => alert('Server is not responding.'));
-    });
 
   async function loadTodayTimetable() {
   try {
@@ -323,7 +277,10 @@
     }
 
     async function logout() {
-        await fetch("/logout");
+        await fetch("https://project-backend.onrender.com/logout", {
+          credentials: "include"
+        });
+
         location.reload();
     }
 
