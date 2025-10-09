@@ -43,8 +43,8 @@ app.use(session({
   }),
   cookie: {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
@@ -138,25 +138,23 @@ mongoose.connect(uri, { dbName: 'teachers' })
     });
 
     app.post('/login', async (req, res) => {
-      const username = req.body.username.trim();
-      const password = req.body.password.trim();
+      try {
+        const username = (req.body.username || '').trim();
+        const password = (req.body.password || '').trim();
 
-      console.log("Login attempt:", { username, password });
-
-      const teacher = await Teacher.findOne({ name: new RegExp(`^${username}$`, 'i') });
-      console.log("Fetched teacher:", teacher);
-
-      if (teacher && teacher.password === password) {
-        req.session.teacher = teacher.name;
+        console.log("Login attempt:", { username });
+        const teacher = await Teacher.findOne({ name: new RegExp(`^${username}$`, 'i') });
         if (teacher && teacher.password === password) {
           req.session.teacher = teacher.name;
-          return res.redirect('/home');  // instead of sending JSON
+          return res.redirect('/home');
         }
 
+        console.log("Invalid credentials for", username);
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      } catch (err) {
+        console.error('Login error', err);
+        return res.status(500).json({ success: false, message: 'Server error' });
       }
-
-      console.log("Invalid credentials");
-      res.json({ success: false, message: 'Invalid credentials' });
     });
 
     app.get('/logout', (req, res) => {
@@ -164,32 +162,36 @@ mongoose.connect(uri, { dbName: 'teachers' })
     });
 
     app.get('/timetable/today', async (req, res) => {
-      const teacher = await Teacher.findOne({ name: req.session.teacher });
-      if (!teacher) return res.status(403).json({ error: 'Not logged in' });
+      try {
+        const teacher = await Teacher.findOne({ name: req.session.teacher });
+        if (!teacher) return res.status(403).json({ error: 'Not logged in' });
 
-      const today = new Date().toISOString().split('T')[0];
-      const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-      const timetable = teacher.timetable.filter(slot => slot.day === dayName);
+        const today = new Date().toISOString().split('T')[0];
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        const timetable = (teacher.timetable || []).filter(slot => (slot.day || '').toLowerCase() === dayName.toLowerCase());
 
-      const history = await SubstitutionHistory.find({ substitute: teacher.name, date: today });
+        const history = await SubstitutionHistory.find({ substitute: teacher.name, date: today });
 
-      const substitutionSlots = history.map(h => ({
-        time: h.time,
-        batch: h.batch,
-        subject:  s.acceptedSubject || s.subject
-      }));
+        const substitutionSlots = (history || []).map(h => ({
+          time: h.time,
+          batch: h.batch,
+          subject: h.acceptedSubject || h.subject
+        }));
 
-      const filteredSubstitutions = substitutionSlots.filter(h =>
-        !timetable.some(t =>
-          t.time === h.time &&
-          t.batch === h.batch &&
-          t.subject === h.subject
-        )
-      );
+        const filteredSubstitutions = substitutionSlots.filter(h =>
+          !timetable.some(t =>
+            (t.time || '') === (h.time || '') &&
+            (t.batch || '') === (h.batch || '') &&
+            ((t.subject || '').toLowerCase() === (h.subject || '').toLowerCase())
+          )
+        );
 
-      const finalTimetable = [...timetable, ...filteredSubstitutions];
-
-      res.json({ timetable: finalTimetable });
+        const finalTimetable = [...timetable, ...filteredSubstitutions];
+        res.json({ timetable: finalTimetable });
+      } catch (err) {
+        console.error('timetable/today error', err);
+        res.status(500).json({ error: 'Server error' });
+      }
     });
 
     app.use((req, res, next) => {
@@ -201,6 +203,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
     });
 
     app.post('/unavailable', async (req, res) => {
+      try {
         const { date, time, batch, subject, allowAny } = req.body;
         const teacherName = req.session.teacher;
         if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
@@ -209,28 +212,29 @@ mongoose.connect(uri, { dbName: 'teachers' })
         const allTeachers = await Teacher.find({ name: { $ne: teacherName } });
 
         const substituteTeachers = allTeachers.filter(t => {
-            const isBusy = t.timetable.some(slot => slot.day === day && slot.time === time);
-            if (isBusy) return false;
+          const isBusy = (t.timetable || []).some(slot => slot.day === day && slot.time === time);
+          if (isBusy) return false;
 
-            if (allowAny) {
-            return t.timetable.some(slot => slot.batch === batch);
-            } else {
-            return t.timetable.some(slot => slot.subject?.toLowerCase() === subject.toLowerCase());
-            }
+          if (allowAny) {
+            return (t.timetable || []).some(slot => slot.batch === batch);
+          } else {
+            return (t.timetable || []).some(slot => (slot.subject || '').toLowerCase() === (subject || '').toLowerCase());
+          }
         });
 
         if (substituteTeachers.length === 0) {
-            return res.json({ success: false, message: "No available teachers found." });
+          return res.json({ success: false, message: "No available teachers found." });
         }
 
         const emailedTo = [];
+        const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
 
         for (const sub of substituteTeachers) {
-            const acceptedSubject = allowAny
+          const acceptedSubject = allowAny
             ? (sub.timetable.find(slot => slot.batch === batch)?.subject || subject)
             : subject;
 
-            const newRequest = new Request({
+          const newRequest = new Request({
             teacher: teacherName,
             substitute: sub.name,
             date,
@@ -239,120 +243,131 @@ mongoose.connect(uri, { dbName: 'teachers' })
             subject,
             acceptedSubject,
             status: 'pending',
-            requestedBy: teacherName
-            });
-            await newRequest.save();
+            requestedBy: teacherName,
+            allowAny: !!allowAny
+          });
+          await newRequest.save();
 
-            const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
-            const acceptLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/accept`;
-            const denyLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/deny`;
+          const acceptLink = `${baseUrl}/respond-email/${encodeURIComponent(sub.name)}/${encodeURIComponent(teacherName)}/${encodeURIComponent(date)}/${encodeURIComponent(time)}/${encodeURIComponent(batch)}/${encodeURIComponent(subject)}/accept`;
+          const denyLink = `${baseUrl}/respond-email/${encodeURIComponent(sub.name)}/${encodeURIComponent(teacherName)}/${encodeURIComponent(date)}/${encodeURIComponent(time)}/${encodeURIComponent(batch)}/${encodeURIComponent(subject)}/deny`;
 
+          try {
             await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: sub.email,
-            subject: `Substitution Request`,
-            html: `<p>${teacherName} requested a substitution on ${date} at ${time} for ${batch} (Subject: ${subject}).</p>
-                    <p><a href="${acceptLink}">Accept</a> | <a href="${denyLink}">Decline</a></p>`
+              from: process.env.EMAIL_USER,
+              to: sub.email,
+              subject: `Substitution Request`,
+              html: `<p>${teacherName} requested a substitution on ${date} at ${time} for ${batch} (Subject: ${subject}).</p>
+                     <p><a href="${acceptLink}">Accept</a> | <a href="${denyLink}">Decline</a></p>`
             });
+          } catch (mailErr) {
+            console.error('Mail send failed to', sub.email, mailErr);
+          }
 
-            emailedTo.push(sub.name);
+          emailedTo.push(sub.name);
         }
 
         return res.json({ success: true, message: "Substitution requests sent.", emailedTo });
-        });
+      } catch (err) {
+        console.error('/unavailable error', err);
+        res.status(500).json({ success: false, message: 'Server error' });
+      }
+    });
 
 
     app.get('/respond-email/:sub/:org/:date/:time/:batch/:subject/:action', async (req, res) => {
+      try {
         const { sub, org, date, time, batch, subject, action } = req.params;
 
         const reqDoc = await Request.findOne({
-            teacher: org,
-            substitute: sub,
-            date,
-            time,
-            batch,
-            subject,
-            status: 'pending'
+          teacher: org,
+          substitute: sub,
+          date,
+          time,
+          batch,
+          subject,
+          status: 'pending'
         });
 
         if (!reqDoc) return res.send('Invalid or already processed request.');
 
         if (action === 'accept') {
-            reqDoc.status = `Accepted by ${sub}`;
-            await reqDoc.save();
+          reqDoc.status = `Accepted by ${sub}`;
+          await reqDoc.save();
 
-            let acceptedSubject = subject;
-            if (reqDoc.allowAny) {
-                const substituteTeacher = await Teacher.findOne({ name: sub });
-                const timetableEntry = acceptingTeacher.timetable.find(slot =>
-                  slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
-                  slot.time === reqDoc.time &&
-                  slot.batch === reqDoc.batch
-                );
+          let acceptedSubject = subject;
+          if (reqDoc.allowAny) {
+            const substituteTeacher = await Teacher.findOne({ name: sub });
+            const timetableEntry = (substituteTeacher?.timetable || []).find(slot =>
+              slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
+              slot.time === reqDoc.time &&
+              slot.batch === reqDoc.batch
+            );
+            acceptedSubject = timetableEntry?.subject || substituteTeacher?.subject || subject;
+          }
 
-                acceptedSubject = timetableEntry?.subject || substituteTeacher?.subject || subject;
-            }
+          await SubstitutionHistory.create({
+            teacher: org,
+            substitute: sub,
+            subject,
+            acceptedSubject,
+            batch,
+            time,
+            date,
+            acceptedAt: new Date()
+          });
 
-            await SubstitutionHistory.create({
-                teacher: org,
-                substitute: sub,
-                subject,
-                acceptedSubject,
-                batch,
-                time,
-                date,
-                acceptedAt: new Date()
+          await Request.deleteMany({
+            _id: { $ne: reqDoc._id },
+            teacher: org,
+            date,
+            time,
+            batch,
+            subject,
+            status: 'pending'
+          });
+
+          const acceptingTeacher = await Teacher.findOne({ name: sub });
+          const originalTeacher = await Teacher.findOne({ name: org });
+          const students = await Student.find({ batch });
+
+          if (acceptingTeacher?.email) {
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: acceptingTeacher.email,
+              subject: 'You accepted a substitution',
+              text: `You will take the ${acceptedSubject} lecture for ${batch} at ${time} on ${date}.`
             });
+          }
 
-            await Request.deleteMany({
-                _id: { $ne: reqDoc._id },
-                teacher: org,
-                date,
-                time,
-                batch,
-                subject,
-                status: 'pending'
+          if (originalTeacher?.email) {
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: originalTeacher.email,
+              subject: 'Substitution Confirmed',
+              text: `${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.`
             });
+          }
 
-            const acceptingTeacher = await Teacher.findOne({ name: sub });
-            const originalTeacher = await Teacher.findOne({ name: org });
-            const students = await Student.find({ batch });
+          for (const student of students) {
+            if (!student.email) continue;
+            await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: student.email,
+              subject: 'Substitution Lecture Alert',
+              text: `Dear ${student.name},\n\nYour lec/lab for ${subject} on ${date} at ${time} is being taken by ${sub}, their subject is ${acceptedSubject}.`
+            });
+          }
 
-            if (acceptingTeacher?.email) {
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: acceptingTeacher.email,
-                    subject: 'You accepted a substitution',
-                    text: `You will take the ${acceptedSubject} lecture for ${batch} at ${time} on ${date}.`
-                });
-            }
-
-            if (originalTeacher?.email) {
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: originalTeacher.email,
-                    subject: 'Substitution Confirmed',
-                    text: `${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.`
-                });
-            }
-
-            for (const student of students) {
-                if (!student.email) continue;
-
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: student.email,
-                    subject: 'Substitution Lecture Alert',
-                    text: `Dear ${student.name},\n\nYour lec/lab for ${subject} on ${date} at ${time} is being taken by ${sub}, their subject is ${acceptedSubject}.`
-                });
-            }
-
-            return res.send('✅ Request accepted and all parties notified.');
+          return res.send('✅ Request accepted and all parties notified.');
         } else {
-            reqDoc.status = 'declined';
-            await reqDoc.save();
-            return res.send('❌ Request declined.');
+          reqDoc.status = 'declined';
+          await reqDoc.save();
+          return res.send('❌ Request declined.');
         }
+      } catch (err) {
+        console.error('/respond-email error', err);
+        return res.status(500).send('Server error processing request');
+      }
     });
 
 
