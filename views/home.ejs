@@ -198,77 +198,142 @@
     </div>
   </div>
 
-  <div class="card">
-    <h3>📅 Your Timetable</h3>
-    <table>
-      <thead>
-        <tr><th>Time</th><th>Batch</th><th>Subject</th></tr>
-      </thead>
-      <tbody id="todayTimetable">
-        <tr><td colspan="3">Loading...</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="card">
+  <table>
+    <div class="card">
+  <h3>📅 Your Timetable</h3>
+  <table>
+    <thead>
+      <tr><th>Time</th><th>Batch</th><th>Subject</th></tr>
+    </thead>
+    <tbody id="todayTimetable"></tbody>
+  </table>
+</div>
 
-  <div class="card">
-    <h3>📚 Substitution History</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>From</th>
-          <th>Date</th>
-          <th>Time</th>
-          <th>Batch</th>
-          <th>Subject</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="historyTable">
-        <tr><td colspan="6">Loading...</td></tr>
-      </tbody>
+<div class="card">
+  <h3>📚 Substitution History</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>From</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Batch</th>
+        <th>Subject</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="historyTable">
+      <tr><td colspan="6">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+  </table>
+</div>
+
     </table>
   </div>
 
 <script>
+  // async function loadTodayTimetable() {
+  //   const res = await fetch('https://project-backend.onrender.com/api/timetable', {
+  //     credentials: 'include'
+  //   });
+
+  //   const data = await res.json();
+  //   const tbody = document.getElementById("todayTimetable");
+  //   tbody.innerHTML = "";
+
+  //   if (data.timetable.length === 0) {
+  //     tbody.innerHTML = `<tr><td colspan="3">No classes scheduled for today</td></tr>`;
+  //     return;
+  //   }
+
+  //   data.timetable.forEach(slot => {
+  //     const row = `<tr>
+  //       <td>${slot.time}</td>
+  //       <td>${slot.batch}</td>
+  //       <td>${slot.subject}</td>
+  //     </tr>`;
+  //     tbody.innerHTML += row;
+  //   });
+  // }
+  
+  document.querySelector('#loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.querySelector('input[name="username"]').value;
+      const password = document.querySelector('input[name="password"]').value;
+
+      fetch('https://project-si3z.onrender.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = 'https://project-si3z.onrender.com/home'; 
+        } else {
+          alert(data.message);
+        }
+      })
+      .catch(() => alert('Server is not responding.'));
+    });
+
   async function loadTodayTimetable() {
-    try {
-      const res = await fetch('/timetable/today', { credentials: 'include' });
-      const tbody = document.getElementById("todayTimetable");
-      if (!res.ok) {
-        tbody.innerHTML = `<tr><td colspan="3">Not logged in or error</td></tr>`;
-        return;
-      }
-      const data = await res.json();
-      tbody.innerHTML = "";
+  try {
+    const res = await fetch('https://project-backend.onrender.com/api/timetable', {
+      credentials: 'include'
+    });
 
-      if (!data.timetable || data.timetable.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3">No classes scheduled for today</td></tr>`;
-        return;
-      }
+    if (!res.ok) throw new Error('Server not responding');
+    const data = await res.json();
 
-      data.timetable.forEach(slot => {
-        const row = `<tr>
-          <td>${slot.time || ''}</td>
-          <td>${slot.batch || ''}</td>
-          <td>${slot.subject || ''}</td>
-        </tr>`;
-        tbody.innerHTML += row;
-      });
-    } catch (err) {
-      document.getElementById("todayTimetable").innerHTML = `<tr><td colspan="3">Error loading timetable</td></tr>`;
-      console.error(err);
+    const tbody = document.getElementById("todayTimetable");
+    tbody.innerHTML = "";
+
+    if (!data.timetable || data.timetable.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3">No classes scheduled for today</td></tr>`;
+      return;
     }
-  }
 
-  async function loadHistory() {
-    try {
-      const res = await fetch('/substitution-history', { credentials: 'include' });
-      const tbody = document.getElementById("historyTable");
-      if (!res.ok) {
-        tbody.innerHTML = `<tr><td colspan="6">Not logged in or error</td></tr>`;
-        return;
-      }
+    data.timetable.forEach(slot => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${slot.time}</td>
+          <td>${slot.batch}</td>
+          <td>${slot.subject}</td>
+        </tr>`;
+    });
+  } catch (error) {
+    console.error(error);
+    alert("Server is not responding. Try again soon.");
+  }
+}
+
+
+  loadTodayTimetable();
+  
+    function toggleMenu() {
+      const menu = document.getElementById("menuBox");
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+
+    async function logout() {
+        await fetch("/logout");
+        location.reload();
+    }
+
+    async function loadHistory() {
+      const res = await fetch('https://project-backend.onrender.com/substitution-history', {
+        credentials: 'include'
+      });
+
       const data = await res.json();
+      const tbody = document.getElementById("historyTable");
       tbody.innerHTML = "";
 
       if (!data.history || data.history.length === 0) {
@@ -277,30 +342,21 @@
       }
 
       data.history.forEach(entry => {
-        const statusText = entry.substitute ? `Accepted by ${entry.substitute}` : (entry.status || '');
         const row = `<tr>
-          <td>${entry.teacher || ''}</td>
-          <td>${entry.date || ''}</td>
-          <td>${entry.time || ''}</td>
-          <td>${entry.batch || ''}</td>
-          <td>${entry.subject || ''}</td>
-          <td>${statusText}</td>
+          <td>${entry.teacher}</td>
+          <td>${entry.date}</td>
+          <td>${entry.time}</td>
+          <td>${entry.batch}</td>
+          <td>${entry.subject}</td>
+          <td>Accepted by ${entry.substitute}</td>
         </tr>`;
         tbody.innerHTML += row;
       });
-    } catch (err) {
-      document.getElementById("historyTable").innerHTML = `<tr><td colspan="6">Error loading history</td></tr>`;
-      console.error(err);
     }
-  }
 
-  async function logout() {
-    await fetch("/logout", { credentials: 'include' });
-    location.reload();
-  }
-
-  loadTodayTimetable();
   loadHistory();
+
+
 </script>
 </body>
 </html>
