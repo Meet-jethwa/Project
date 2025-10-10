@@ -138,7 +138,9 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 });
 
 async function loadTimetable() {
-  const res = await fetch("https://project-backend.onrender.com/timetable");
+  const res = await fetch(`${process.env.FRONTEND_URL}/timetable`, {
+    credentials: "include"
+  });
   const data = await res.json();
   const tbody = document.getElementById("teacherTimetable");
   tbody.innerHTML = "";
@@ -154,7 +156,7 @@ async function loadTimetable() {
 }
 
 async function logout() {
-  await fetch("https://project-si3z.onrender.com/logout");
+  await fetch(`${process.env.FRONTEND_URL}/logout`);
   location.reload();
 }
 
@@ -165,7 +167,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   const batch = document.getElementById("unavailBatch").value;
   const subject = document.getElementById("unavailSubject").value;
 
-  const res = await fetch("https://project-si3z.onrender.com/unavailable", {
+  const res = await fetch(`${process.env.FRONTEND_URL}/unavailable`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ date, time, batch, subject }),
@@ -179,7 +181,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
 });
 
 async function loadRequests() {
-  const res = await fetch("https://project-si3z.onrender.com/substitute-requests");
+  const res = await fetch(`${process.env.FRONTEND_URL}/substitute-requests`);
   const data = await res.json();
   const tbody = document.getElementById("requestsBody");
   const historyBody = document.getElementById("historyBody");
@@ -217,7 +219,7 @@ async function loadRequests() {
 }
 
 async function respondToRequest(id, agree) {
-  const res = await fetch("https://project-backend.onrender.com/respond", {
+  const res = await fetch(`${process.env.FRONTEND_URL}/respond`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ requestId: id, agree }),
@@ -229,7 +231,7 @@ async function respondToRequest(id, agree) {
 }
 
 async function loadSentRequests() {
-  const res = await fetch("https://project-backend.onrender.com/sent-requests");
+  const res = await fetch(`${process.env.FRONTEND_URL}/sent-requests`);
   const data = await res.json();
   const tbody = document.getElementById("sentRequestsBody");
   tbody.innerHTML = "";

@@ -285,7 +285,7 @@
     }
 
     async function loadHistory() {
-      const res = await fetch('https://project-backend.onrender.com/substitution-history', {
+      const res = await fetch(`${process.env.FRONTEND_URL}/substitution-history`, {
         credentials: 'include'
       });
 
