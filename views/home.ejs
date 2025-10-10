@@ -239,7 +239,7 @@
 
   async function loadTodayTimetable() {
   try {
-    const res = await fetch('https://project-backend.onrender.com/api/timetable', {
+    const res = await fetch(`${process.env.FRONTEND_URL}/api/timetable`, {
       credentials: 'include'
     });
 
