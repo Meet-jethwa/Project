@@ -104,7 +104,7 @@
     let retries = 5;
     while (retries--) {
       try {
-        const res = await fetch(`${process.env.FRONTEND_URL}/health`);
+        const res = await fetch("https://project-si3z.onrender.com/health");
         const data = await res.json();
         if (data.connected) return true;
       } catch (err) {
@@ -130,7 +130,7 @@
   const password = document.getElementById("password").value;
 
   try {
-    const res = await fetch("/login", {
+    const res = await fetch("https://project-si3z.onrender.com/home", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -138,7 +138,7 @@
 
     const data = await res.json();
     if (data.success) {
-      window.location.href = `${process.env.FRONTEND_URL}/home`;  
+      window.location.href = "https://project-si3z.onrender.com/home";  
     } else {
       document.getElementById("loginMessage").innerText = data.message;
     }

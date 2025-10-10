@@ -239,7 +239,7 @@
 
   async function loadTodayTimetable() {
   try {
-    const res = await fetch(`${process.env.FRONTEND_URL}/api/timetable`, {
+    const res = await fetch('https://project-si3z.onrender.com/api/timetable', {
       credentials: 'include'
     });
 
@@ -285,7 +285,7 @@
     }
 
     async function loadHistory() {
-      const res = await fetch(`${process.env.FRONTEND_URL}/substitution-history`, {
+      const res = await fetch('https://project-si3z.onrender.com/substitution-history', {
         credentials: 'include'
       });
 
