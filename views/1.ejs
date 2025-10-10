@@ -231,7 +231,7 @@ async function respondToRequest(id, agree) {
 }
 
 async function loadSentRequests() {
-  const res = await fetch(`${process.env.FRONTEND_URL}/sent-requests`);
+  const res = await fetch("https://project-si3z.onrender.com/sent-requests");
   const data = await res.json();
   const tbody = document.getElementById("sentRequestsBody");
   tbody.innerHTML = "";
