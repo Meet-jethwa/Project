@@ -487,11 +487,9 @@ mongoose.connect(uri, { dbName: 'teachers' })
       const teacher = await Teacher.findOne({ name: req.session.teacher });
       if (!teacher) return res.redirect('/');
 
-      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
       res.render('home', {
         name: teacher.name,
-        email: teacher.email || `${teacher.name.toLowerCase()}@somaiya.edu`,
-        BASE_URL: baseUrl
+        email: teacher.email || `${teacher.name.toLowerCase()}@somaiya.edu`
       });
     });
 

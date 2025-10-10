@@ -2,184 +2,184 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Teacher Dashboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Home Page</title>
   <style>
-    :root{--bg:#f6f9fc;--card:#fff;--accent:#2563eb;--muted:#6b7280}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,Segoe UI,system-ui,Arial;background:var(--bg);color:#0f172a;padding:18px}
-    .container{max-width:1100px;margin:0 auto}
-    header{display:flex;align-items:center;justify-content:space-between;background:var(--accent);color:#fff;padding:18px;border-radius:10px}
-    .profile{display:flex;align-items:center;gap:14px}
-    .profile img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.12)}
-    .info h2{margin:0;font-size:18px}
-    .info p{margin:2px 0;font-size:13px;opacity:.95}
-    .logout-btn{background:#ef4444;border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:18px}
-    .card{background:var(--card);border-radius:10px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
-    .full{grid-column:1/-1}
-    h3{margin:0 0 12px 0;color:#0f172a}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #eef2f6;text-align:left;font-size:14px}
-    th{background:#f3f6fb;color:#0f172a}
-    .muted{color:var(--muted);font-size:13px}
-    .spinner{width:48px;height:48px;border-radius:50%;border:5px solid rgba(0,0,0,0.08);border-top-color:var(--accent);animation:spin 1s linear infinite;margin:18px auto}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .center{text-align:center}
-    .small{font-size:13px}
-    a.btn-link{display:inline-block;text-decoration:none}
-    @media (max-width:900px){
-      .grid{grid-template-columns:1fr; }
-      .profile img{width:56px;height:56px}
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      color: #1e293b;
+      padding: 20px;
+    }
+
+    header {
+      background: #1e3a8a;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 12px;
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .profile img {
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+    }
+
+    .info h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .info p {
+      margin: 2px 0;
+      font-size: 14px;
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .logout-btn {
+      padding: 10px 18px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+
+    .hamburger {
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    .menu-content {
+      display: none;
+      position: absolute;
+      top: 90px;
+      right: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 260px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+    }
+
+    .menu-content a {
+      display: block;
+      padding: 14px;
+      text-decoration: none;
+      color: #111827;
+      font-weight: 500;
+    }
+
+    .menu-content a:hover {
+      background: #e5e7eb;
+    }
+
+    h3 {
+      margin-top: 30px;
+      font-size: 20px;
+      border-left: 6px solid #3b82f6;
+      padding-left: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #2563eb;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f1f5f9;
+    }
+
+    tr:hover {
+      background-color: #e2e8f0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .card h4 {
+      margin-bottom: 10px;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .btn-option {
+      background: #3b82f6;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-weight: 500;
+    }
+
+    .btn-option:hover {
+      background: #2563eb;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="profile">
-        <img src="https://tse4.mm.bing.net/th/id/OIP.icRntapo_CZpFI2-WEo_YgHaHn?pid=Api&P=0&h=180" alt="Profile">
-        <div class="info">
-          <h2><%= name %></h2>
-          <p class="small"><strong>Email:</strong> <%= email %></p>
-          <p class="small muted">Role: Faculty</p>
-        </div>
+  <header>
+    <div class="profile">
+      <img src="https://tse4.mm.bing.net/th/id/OIP.icRntapo_CZpFI2-WEo_YgHaHn?pid=Api&P=0&h=180" alt="Profile" />
+      <div class="info">
+        <h2><%= name %></h2>
+        <p><strong>Email:</strong> <%= email %></p>
+        <p><strong>Role:</strong> Faculty</p>
       </div>
-      <div>
-        <button class="logout-btn" id="logoutBtn">Logout</button>
-      </div>
-    </header>
-
-    <div class="grid">
-      <section class="card">
-        <h3>📅 Today's Timetable</h3>
-        <div id="ttLoader" class="center"><div class="spinner" aria-hidden="true"></div><div class="muted small">Loading timetable...</div></div>
-        <div id="ttError" class="center muted" style="display:none"></div>
-        <div id="timetableWrap" style="display:none">
-          <table id="timetableTable" aria-live="polite">
-            <thead><tr><th>Time</th><th>Batch</th><th>Subject</th></tr></thead>
-            <tbody id="timetableBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <aside class="card">
-        <h3>Quick Actions</h3>
-        <div class="small muted">Fast links</div>
-        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
-          <a class="btn-link" href="/substitution"><button style="background:var(--accent);color:#fff;padding:10px;border-radius:8px;border:none;cursor:pointer">Request Substitution</button></a>
-          <button style="background:#eef2ff;color:var(--accent);padding:10px;border-radius:8px;border:1px solid rgba(37,99,235,0.12);cursor:pointer">Block / Unblock ID</button>
-          <button style="background:#eef2ff;color:var(--accent);padding:10px;border-radius:8px;border:1px solid rgba(37,99,235,0.12);cursor:pointer">Reset Email / Password</button>
-        </div>
-      </aside>
-
-      <section class="card full">
-        <h3>📚 Substitution History</h3>
-        <div id="histLoader" class="center"><div class="spinner" aria-hidden="true"></div><div class="muted small">Loading history...</div></div>
-        <div id="histError" class="center muted" style="display:none"></div>
-        <div id="historyWrap" style="display:none">
-          <table id="historyTable">
-            <thead><tr><th>From</th><th>Date</th><th>Time</th><th>Batch</th><th>Subject</th><th>Status</th></tr></thead>
-            <tbody id="historyBody"></tbody>
-          </table>
-        </div>
-      </section>
     </div>
-  </div>
 
-  <script>
-    // backend URL injected from server
-    const backendURL = "<%= BASE_URL %>";
-
-    const showError = (el, msg) => { el.style.display = 'block'; el.textContent = msg; };
-    const hide = el => el.style.display = 'none';
-    const show = el => el.style.display = '';
-
-    async function fetchTimetable() {
-      const loader = document.getElementById('ttLoader');
-      const wrap = document.getElementById('timetableWrap');
-      const err = document.getElementById('ttError');
-      show(loader); hide(err); hide(wrap);
-      try {
-        const res = await fetch(`${backendURL}/api/timetable`, { credentials: 'include' });
-        if (res.status === 401) {
-          showError(err, 'Not logged in. Please login again.');
-          return;
-        }
-        if (!res.ok) throw new Error('Failed to load timetable');
-        const data = await res.json();
-        const rows = data.timetable || [];
-        const tbody = document.getElementById('timetableBody');
-        tbody.innerHTML = '';
-        if (rows.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" class="center muted">No classes scheduled for today</td></tr>';
-        } else {
-          rows.forEach(s => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${s.time || ''}</td><td>${s.batch || ''}</td><td>${s.subject || ''}</td>`;
-            tbody.appendChild(tr);
-          });
-        }
-        hide(loader); show(wrap);
-      } catch (err) {
-        hide(loader);
-        showError(document.getElementById('ttError'), 'Unable to load timetable. Please try again later.');
-        console.error('timetable error', err);
-      }
-    }
-
-    async function fetchHistory() {
-      const loader = document.getElementById('histLoader');
-      const wrap = document.getElementById('historyWrap');
-      const err = document.getElementById('histError');
-      show(loader); hide(err); hide(wrap);
-      try {
-        const res = await fetch(`${backendURL}/substitution-history`, { credentials: 'include' });
-        if (res.status === 401) {
-          showError(err, 'Not logged in. Please login again.');
-          return;
-        }
-        if (!res.ok) throw new Error('Failed to load history');
-        const data = await res.json();
-        const rows = data.history || [];
-        const tbody = document.getElementById('historyBody');
-        tbody.innerHTML = '';
-        if (rows.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="center muted">No substitution history</td></tr>';
-        } else {
-          rows.forEach(h => {
-            const tr = document.createElement('tr');
-            const status = h.substitute ? `Accepted by ${h.substitute}` : (h.status || '');
-            tr.innerHTML = `<td>${h.teacher || ''}</td><td>${h.date || ''}</td><td>${h.time || ''}</td><td>${h.batch || ''}</td><td>${h.subject || ''}</td><td>${status}</td>`;
-            tbody.appendChild(tr);
-          });
-        }
-        hide(loader); show(wrap);
-      } catch (err) {
-        hide(loader);
-        showError(document.getElementById('histError'), 'Unable to load history. Please try again later.');
-        console.error('history error', err);
-      }
-    }
-
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      try {
-        await fetch(`${backendURL}/logout`, { credentials: 'include' });
-      } catch (e) {
-        console.warn('logout request failed', e);
-      } finally {
-        window.location.href = '/';
-      }
-    });
-
-    // initial load
-    (function init() {
-      fetchTimetable();
-      fetchHistory();
-    })();
-  </script>
-</body>
-</html>
+    <div class="top-right">
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
   </header>
 
   <div class="card">
@@ -235,5 +235,85 @@
     </table>
   </div>
 
+<script>
+
+  async function loadTodayTimetable() {
+  try {
+    const res = await fetch('https://project-backend.onrender.com/api/timetable', {
+      credentials: 'include'
+    });
+
+    if (!res.ok) throw new Error('Server not responding');
+    const data = await res.json();
+
+    const tbody = document.getElementById("todayTimetable");
+    tbody.innerHTML = "";
+
+    if (!data.timetable || data.timetable.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3">No classes scheduled for today</td></tr>`;
+      return;
+    }
+
+    data.timetable.forEach(slot => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${slot.time}</td>
+          <td>${slot.batch}</td>
+          <td>${slot.subject}</td>
+        </tr>`;
+    });
+  } catch (error) {
+    console.error(error);
+    alert("Server is not responding. Try again soon.");
+  }
+}
+
+
+  loadTodayTimetable();
+  
+    function toggleMenu() {
+      const menu = document.getElementById("menuBox");
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+
+    async function logout() {
+        await fetch("https://project-backend.onrender.com/logout", {
+          credentials: "include"
+        });
+
+        location.reload();
+    }
+
+    async function loadHistory() {
+      const res = await fetch('https://project-backend.onrender.com/substitution-history', {
+        credentials: 'include'
+      });
+
+      const data = await res.json();
+      const tbody = document.getElementById("historyTable");
+      tbody.innerHTML = "";
+
+      if (!data.history || data.history.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No substitution history found</td></tr>`;
+        return;
+      }
+
+      data.history.forEach(entry => {
+        const row = `<tr>
+          <td>${entry.teacher}</td>
+          <td>${entry.date}</td>
+          <td>${entry.time}</td>
+          <td>${entry.batch}</td>
+          <td>${entry.subject}</td>
+          <td>Accepted by ${entry.substitute}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+  loadHistory();
+
+
+</script>
 </body>
 </html>
