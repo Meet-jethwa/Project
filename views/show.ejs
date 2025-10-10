@@ -104,7 +104,7 @@
     let retries = 5;
     while (retries--) {
       try {
-        const res = await fetch("http://localhost:4000/health");
+        const res = await fetch("https://project-backend.onrender.com/health");
         const data = await res.json();
         if (data.connected) return true;
       } catch (err) {
@@ -138,7 +138,7 @@
 
     const data = await res.json();
     if (data.success) {
-      window.location.href = "/home";  
+      window.location.href = "https://project-backend.onrender.com/home";  
     } else {
       document.getElementById("loginMessage").innerText = data.message;
     }
