@@ -74,7 +74,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
     );
 
     
-    app.get('/timetable', async (req, res) => {
+    app.get('/api/timetable', async (req, res) => {
       const teacherName = req.session.teacher;
       const selectedDate = req.query.date || new Date().toISOString().split('T')[0];
       const selectedDateObj = new Date(selectedDate);
@@ -148,7 +148,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
       res.json({ connected: state === 1 });
     });
 
-    app.post('/login', async (req, res) => {
+    app.post('https://project-si3z.onrender.com/login', async (req, res) => {
       const username = req.body.username.trim();
       const password = req.body.password.trim();
 
@@ -468,7 +468,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
     });
 
 
-    app.get('/substitution-history', async (req, res) => {
+    app.get('https://project-si3z.onrender.com/substitution-history', async (req, res) => {
       const teacherName = req.session.teacher;
       if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
 

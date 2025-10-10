@@ -154,7 +154,7 @@ async function loadTimetable() {
 }
 
 async function logout() {
-  await fetch("https://project-backend.onrender.com/logout");
+  await fetch("https://project-si3z.onrender.com/logout");
   location.reload();
 }
 
@@ -165,7 +165,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   const batch = document.getElementById("unavailBatch").value;
   const subject = document.getElementById("unavailSubject").value;
 
-  const res = await fetch("https://project-backend.onrender.com/unavailable", {
+  const res = await fetch("https://project-si3z.onrender.com/unavailable", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ date, time, batch, subject }),
@@ -179,7 +179,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
 });
 
 async function loadRequests() {
-  const res = await fetch("https://project-backend.onrender.com/substitute-requests");
+  const res = await fetch("https://project-si3z.onrender.com/substitute-requests");
   const data = await res.json();
   const tbody = document.getElementById("requestsBody");
   const historyBody = document.getElementById("historyBody");
