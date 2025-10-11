@@ -220,7 +220,7 @@ async function loadTimetable() {
 }
 
 async function loadRequests() {
-  const res = await fetch('http://localhost:4000/substitute-requests', { credentials: 'include' });
+  const res = await fetch('https://project-si3z.onrender.com/substitute-requests', { credentials: 'include' });
   const data = await res.json();
   console.log("Substitute requests received:", data.requests);
 
@@ -246,7 +246,7 @@ async function loadRequests() {
 }
 
 async function loadSentRequests() {
-  const res = await fetch('http://localhost:4000/sent-requests', { credentials: 'include' });
+  const res = await fetch('https://project-si3z.onrender.com/sent-requests', { credentials: 'include' });
   const data = await res.json();
 
   const body = document.getElementById("sentRequestsBody");
@@ -266,7 +266,7 @@ async function loadSentRequests() {
 }
 
 async function loadHistory() {
-  const res = await fetch('http://localhost:4000/substitution-history', { credentials: 'include' });
+  const res = await fetch('https://project-si3z.onrender.com/substitution-history', { credentials: 'include' });
   const data = await res.json();
   const table = document.getElementById('historyBody');
   table.innerHTML = '';
@@ -408,7 +408,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   const [time, batch, subject] = slotValue.split('|');
 
   try {
-    const res = await fetch("http://localhost:4000/unavailable", {
+    const res = await fetch("https://project-si3z.onrender.com/unavailable", {
       method: "POST",
       credentials: "include", 
       headers: {
@@ -433,7 +433,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
     loadSentRequests();
 
   } catch (err) {
-    console.error("❌ Error sending request:", err);
+    console.error("Error sending request:", err);
     alert("Failed to send request: " + err.message);
   }
 });
