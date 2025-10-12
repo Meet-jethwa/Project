@@ -682,10 +682,30 @@ app.get('/substitute-requests', asyncHandler(async (req, res) => {
   res.json({ requests });
 }));
 
-// ...existing code...
-
-    })
-    .catch((err) => {
-      console.error("MongoDB connection error:", err);
-      process.exit(1);
+// Add error handler middleware
+app.use((err, req, res, next) => {
+    console.error('Server error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
     });
+});
+
+// Listen on the port AFTER mongoose connection setup
+// This ensures the server starts even if inside the .then() block
+const server = app.listen(PORT, '0.0.0.0', () => {
+
+
+
+});    console.log(`✅ Connected to MongoDB`);    console.log(`✅ Server running on port ${PORT}`);    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, closing server...');
+    server.close(() => {
+        console.log('Server closed');
+        mongoose.connection.close();
+    });
+});

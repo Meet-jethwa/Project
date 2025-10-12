@@ -39,7 +39,7 @@
   },
   "description": "",
   "engines": {
-    "node": "22.x"
+    "node": ">=14.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.10",
