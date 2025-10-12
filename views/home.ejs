@@ -236,14 +236,16 @@
   </div>
 
 <script>
+const backendURL = 'https://project-si3z.onrender.com'; // Add this line at the top
 
-  async function loadTodayTimetable() {
+async function loadTodayTimetable() {
   try {
-    const res = await fetch('https://project-si3z.onrender.com/timetable', {
-      credentials: 'include'
+    const res = await fetch(`${backendURL}/api/timetable`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    if (!res.ok) throw new Error('Server not responding');
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
 
     const tbody = document.getElementById("todayTimetable");
@@ -264,7 +266,8 @@
     });
   } catch (error) {
     console.error(error);
-    alert("Server is not responding. Try again soon.");
+    const tbody = document.getElementById("todayTimetable");
+    tbody.innerHTML = `<tr><td colspan="3">Error: ${error.message}</td></tr>`;
   }
 }
 
@@ -277,38 +280,50 @@
     }
 
     async function logout() {
-        await fetch("https://project-si3z.onrender.com/logout", {
-          credentials: "include"
+      try {
+        await fetch(`${backendURL}/logout`, {
+          credentials: "include",
+          headers: { 'Content-Type': 'application/json' }
         });
-
-        location.reload();
+      } catch (e) {
+        console.error("Logout failed:", e);
+      } finally {
+        window.location.href = '/';
+      }
     }
 
     async function loadHistory() {
-      const res = await fetch('https://project-si3z.onrender.com/substitution-history', {
-        credentials: 'include'
-      });
+      try {
+        const res = await fetch(`${backendURL}/substitution-history`, {
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        });
 
-      const data = await res.json();
-      const tbody = document.getElementById("historyTable");
-      tbody.innerHTML = "";
+        const data = await res.json();
+        const tbody = document.getElementById("historyTable");
+        tbody.innerHTML = "";
 
-      if (!data.history || data.history.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6">No substitution history found</td></tr>`;
-        return;
+        if (!data.history || data.history.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6">No substitution history found</td></tr>`;
+          return;
+        }
+
+        data.history.forEach(entry => {
+          const row = `<tr>
+            <td>${entry.teacher}</td>
+            <td>${entry.date}</td>
+            <td>${entry.time}</td>
+            <td>${entry.batch}</td>
+            <td>${entry.subject}</td>
+            <td>Accepted by ${entry.substitute}</td>
+          </tr>`;
+          tbody.innerHTML += row;
+        });
+      } catch (error) {
+        console.error(error);
+        const tbody = document.getElementById("historyTable");
+        tbody.innerHTML = `<tr><td colspan="6">Error loading history: ${error.message}</td></tr>`;
       }
-
-      data.history.forEach(entry => {
-        const row = `<tr>
-          <td>${entry.teacher}</td>
-          <td>${entry.date}</td>
-          <td>${entry.time}</td>
-          <td>${entry.batch}</td>
-          <td>${entry.subject}</td>
-          <td>Accepted by ${entry.substitute}</td>
-        </tr>`;
-        tbody.innerHTML += row;
-      });
     }
 
   loadHistory();

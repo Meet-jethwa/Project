@@ -205,7 +205,12 @@ async function loadTimetable() {
     const selectedDate = dateInput.value ? new Date(dateInput.value) : new Date();
     const isoDate = selectedDate.toISOString().split('T')[0];
 
-    const res = await fetch(`/timetable?date=${isoDate}`);
+    const res = await fetch(`${backendURL}/timetable?date=${isoDate}`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
 
     console.log("Fetched Timetable:", data);
@@ -217,6 +222,8 @@ async function loadTimetable() {
     updateSlotDropdown(selectedDate);
   } catch (err) {
     console.error("Failed to load timetable:", err);
+    document.getElementById("teacherTimetable").innerHTML = 
+      `<tr><td colspan="4">Error loading timetable: ${err.message}</td></tr>`;
   }
 }
 
@@ -224,12 +231,10 @@ async function loadRequests() {
   try {
     const res = await fetch(`${backendURL}/substitute-requests`, {
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
     
-    if (!res.ok) throw new Error('Failed to fetch requests');
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
     console.log("Substitute requests received:", data.requests);
 
@@ -254,28 +259,35 @@ async function loadRequests() {
 
   } catch (err) {
     console.error("Error loading requests:", err);
-    document.getElementById("requestsBody").innerHTML = `<tr><td colspan="6">Error loading requests: ${err.message}</td></tr>`;
+    document.getElementById("requestsBody").innerHTML = 
+      `<tr><td colspan="6">Error loading requests: ${err.message}</td></tr>`;
   }
 }
 
 async function loadSentRequests() {
-  const res = await fetch('https://project-si3z.onrender.com/sent-requests', { credentials: 'include' });
-  const data = await res.json();
+  try {
+    const res = await fetch(`${backendURL}/sent-requests`, {
+      credentials: 'include'
+    });
+    const data = await res.json();
 
-  const body = document.getElementById("sentRequestsBody");
-  body.innerHTML = "";
+    const body = document.getElementById("sentRequestsBody");
+    body.innerHTML = "";
 
-  data.sent.forEach(r => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${r.date}</td>
-      <td>${r.time}</td>
-      <td>${r.batch}</td>
-      <td>${r.subject}</td>
-      <td>${r.status}</td>
-    `;
-    body.appendChild(row);
-  });
+    data.sent.forEach(r => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${r.date}</td>
+        <td>${r.time}</td>
+        <td>${r.batch}</td>
+        <td>${r.subject}</td>
+        <td>${r.status}</td>
+      `;
+      body.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Error loading sent requests:", err);
+  }
 }
 
 async function loadHistory() {
@@ -407,30 +419,26 @@ document.getElementById('unavailDate').addEventListener('change', function() {
 
 document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  console.log("✅ FORM SUBMITTED");
-
-  const date = document.getElementById("unavailDate").value;
-  const slotValue = document.getElementById("unavailSlot").value;
-  const allowAny = document.getElementById("allowAny").checked;
-
-  if (!slotValue || slotValue === "") {
-    alert("Please select a valid time slot");
-    return;
-  }
-
-  const [time, batch, subject] = slotValue.split('|');
-
+  
   try {
+    const date = document.getElementById("unavailDate").value;
+    const slotValue = document.getElementById("unavailSlot").value;
+    if (!slotValue) {
+      alert("Please select a valid time slot");
+      return;
+    }
+
+    const [time, batch, subject] = slotValue.split('|');
+    const allowAny = document.getElementById("allowAny").checked;
+
     const res = await fetch(`${backendURL}/unavailable`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ date, time, batch, subject, allowAny })
     });
 
-    if (!res.ok) throw new Error('Server returned ' + res.status);
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
     const data = await res.json();
 
     if (!data.success) {
@@ -438,9 +446,13 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    alert(data.message + (data.emailedTo ? `\nMail sent to: ${data.emailedTo.join(', ')}` : ''));
-    loadSentRequests();
+    let alertMsg = data.message || "Substitution request sent.";
+    if (data.emailedTo?.length > 0) {
+      alertMsg += `\nMail sent to: ${data.emailedTo.join(', ')}`;
+    }
+    alert(alertMsg);
 
+    loadSentRequests();
   } catch (err) {
     console.error("Error:", err);
     alert("Failed to send request: " + err.message);

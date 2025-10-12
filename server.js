@@ -126,8 +126,10 @@ mongoose.connect(uri, { dbName: 'teachers' })
         return res.status(401).json({ message: 'Not logged in' });
       }
 
-      const teacherName = req.session.teacher.name;
-      const timetable = await Timetable.find({ teacher: teacherName });
+      const teacher = await Teacher.findOne({ name: req.session.teacher });
+      if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
+      
+      const timetable = teacher.timetable || [];
       res.json({ timetable });
     });
 
@@ -184,7 +186,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
       const substitutionSlots = history.map(h => ({
         time: h.time,
         batch: h.batch,
-        subject:  s.acceptedSubject || s.subject
+        subject: h.acceptedSubject || h.subject  // Fixed s to h
       }));
 
       const filteredSubstitutions = substitutionSlots.filter(h =>
@@ -293,7 +295,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
             let acceptedSubject = subject;
             if (reqDoc.allowAny) {
                 const substituteTeacher = await Teacher.findOne({ name: sub });
-                const timetableEntry = acceptingTeacher.timetable.find(slot =>
+                const timetableEntry = substituteTeacher?.timetable.find(slot =>  // Fixed reference
                   slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
                   slot.time === reqDoc.time &&
                   slot.batch === reqDoc.batch
