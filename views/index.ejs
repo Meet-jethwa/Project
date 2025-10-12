@@ -329,7 +329,7 @@ async function respond(requestId, agree) {
     await loadSentRequests();
     await loadTimetable();
   } catch (err) {
-    console.error("❌ Error responding to request:", err);
+    console.error("Error responding to request:", err);
     alert("Failed to respond: " + err.message);
   }
 }
