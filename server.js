@@ -8,6 +8,8 @@ const path = require('path');
 const mongoose = require('mongoose');
 const sendEmail = require('./utils/sendEmail');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+
 const Student = require('./models/Student'); 
 const Teacher = require('./models/Teacher');
 const Request = require('./models/Request');
@@ -246,6 +248,28 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+app.post('/send-email', asyncHandler(async (req, res) => {
+    const { to, subject, message } = req.body;
+    if (!to || !subject || !message) {
+        return res.status(400).json({ success: false, error: 'Missing to, subject, or message' });
+    }
+
+    try {
+        await resend.emails.send({
+            from: 'Teacher Manager App <onboarding@resend.dev>',
+            to,
+            subject,
+            html: `<p>${message}</p>`
+        });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Resend email failed:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+}));
 
 async function notifyEmail(to, subject, html, fallbackText = '') {
   if (!to) return { ok: false, error: 'Missing recipient email' };
@@ -750,7 +774,7 @@ app.use((err, req, res, next) => {
 // Start server INSIDE mongoose .then()
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
-    console.log(`✅ Connected to MongoDB`);
+    console.log(`Connected to MongoDB`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 })
 })
