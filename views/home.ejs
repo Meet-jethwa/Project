@@ -236,7 +236,7 @@
   </div>
 
 <script>
-const backendURL = 'https://project-si3z.onrender.com'; // Add this line at the top
+const backendURL = 'https://project-si3z.onrender.com';
 
 async function loadTodayTimetable() {
   try {
@@ -256,6 +256,9 @@ async function loadTodayTimetable() {
       return;
     }
 
+    // Sort by time
+    data.timetable.sort((a, b) => a.time.localeCompare(b.time));
+
     data.timetable.forEach(slot => {
       tbody.innerHTML += `
         <tr>
@@ -271,9 +274,42 @@ async function loadTodayTimetable() {
   }
 }
 
+async function loadHistory() {
+  try {
+    const res = await fetch(`${backendURL}/substitution-history`, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-  loadTodayTimetable();
-  
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    
+    const tbody = document.getElementById("historyTable");
+    tbody.innerHTML = "";
+
+    if (!data.history || data.history.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6">No upcoming substitutions</td></tr>`;
+      return;
+    }
+
+    data.history.forEach(entry => {
+      const row = `<tr>
+        <td>${entry.teacher}</td>
+        <td>${entry.date}</td>
+        <td>${entry.time}</td>
+        <td>${entry.batch}</td>
+        <td>${entry.subject}</td>
+        <td>Accepted by ${entry.substitute}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+  } catch (error) {
+    console.error(error);
+    const tbody = document.getElementById("historyTable");
+    tbody.innerHTML = `<tr><td colspan="6">Error loading history: ${error.message}</td></tr>`;
+  }
+}
+
     function toggleMenu() {
       const menu = document.getElementById("menuBox");
       menu.style.display = menu.style.display === "block" ? "none" : "block";
@@ -292,40 +328,7 @@ async function loadTodayTimetable() {
       }
     }
 
-    async function loadHistory() {
-      try {
-        const res = await fetch(`${backendURL}/substitution-history`, {
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await res.json();
-        const tbody = document.getElementById("historyTable");
-        tbody.innerHTML = "";
-
-        if (!data.history || data.history.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6">No substitution history found</td></tr>`;
-          return;
-        }
-
-        data.history.forEach(entry => {
-          const row = `<tr>
-            <td>${entry.teacher}</td>
-            <td>${entry.date}</td>
-            <td>${entry.time}</td>
-            <td>${entry.batch}</td>
-            <td>${entry.subject}</td>
-            <td>Accepted by ${entry.substitute}</td>
-          </tr>`;
-          tbody.innerHTML += row;
-        });
-      } catch (error) {
-        console.error(error);
-        const tbody = document.getElementById("historyTable");
-        tbody.innerHTML = `<tr><td colspan="6">Error loading history: ${error.message}</td></tr>`;
-      }
-    }
-
+  loadTodayTimetable();
   loadHistory();
 
 

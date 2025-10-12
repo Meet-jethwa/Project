@@ -188,6 +188,7 @@
 const backendURL = 'https://project-si3z.onrender.com';
 
 window.onload = () => {
+  setMinDateTime(); // Prevent past date/time selection
   loadTimetable();
   loadRequests();
   loadSentRequests();
@@ -195,6 +196,13 @@ window.onload = () => {
   updateSlotDropdown(new Date());
   document.getElementById("teacherPanel").style.display = "block";
 };
+
+// Set minimum date to today
+function setMinDateTime() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('unavailDate').min = today;
+  document.getElementById('timetableDate').min = today;
+}
 
 let teacherTimetableData = [];
 
@@ -291,25 +299,40 @@ async function loadSentRequests() {
 }
 
 async function loadHistory() {
-  const res = await fetch('https://project-si3z.onrender.com/substitution-history', { credentials: 'include' });
-  const data = await res.json();
-  const table = document.getElementById('historyBody');
-  table.innerHTML = '';
+  try {
+    const res = await fetch(`${backendURL}/substitution-history`, { 
+      credentials: 'include' 
+    });
+    
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    
+    const table = document.getElementById('historyBody');
+    table.innerHTML = '';
 
-  data.history.forEach(h => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${h.teacher}</td>
-      <td>${h.date}</td>
-      <td>${h.time}</td>
-      <td>${h.batch}</td>
-      <td>${h.subject}</td>
-      <td>Accepted by ${h.substitute}</td>
-    `;
-    table.appendChild(row);
-  });
+    if (!data.history || data.history.length === 0) {
+      table.innerHTML = '<tr><td colspan="6">No upcoming substitutions</td></tr>';
+      return;
+    }
+
+    data.history.forEach(h => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${h.teacher}</td>
+        <td>${h.date}</td>
+        <td>${h.time}</td>
+        <td>${h.batch}</td>
+        <td>${h.subject}</td>
+        <td>Accepted by ${h.substitute}</td>
+      `;
+      table.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Error loading history:", err);
+    document.getElementById('historyBody').innerHTML = 
+      `<tr><td colspan="6">Error loading history: ${err.message}</td></tr>`;
+  }
 }
-
 
 function updateTimetableDisplay(selectedDate) {
   const tableBody = document.querySelector("#teacherTimetable");
@@ -338,7 +361,7 @@ function updateTimetableDisplay(selectedDate) {
 
 async function respond(requestId, agree) {
   try {
-    const res = await fetch(`${backendURL}/respond`, {
+    const res = await fetch(`${backendURL}/substitution/respond`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -357,41 +380,14 @@ async function respond(requestId, agree) {
   }
 }
 
-async function respondToRequest(requestId, agree) {
-  try {
-    const res = await fetch(`${backendURL}/respond`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ requestId, agree })
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Server responded with HTML:\n${text}`);
-    }
-
-    const data = await res.json();
-    if (data.success) {
-      alert(data.message);
-      await loadTimetable();
-      await loadRequests();
-      await loadSentRequests();
-
-    } else {
-      alert('Failed: ' + data.error);
-    }
-
-  } catch (err) {
-    console.error(err);
-    alert("Failed to respond: " + err.message);
-  }
-}
-
 function updateSlotDropdown(selectedDate) {
   const slotSelect = document.getElementById('unavailSlot');
   slotSelect.innerHTML = '<option value="">Select a time slot</option>';
+
+  const now = new Date();
+  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const todayStr = now.toISOString().split('T')[0];
+  const currentTime = now.toTimeString().slice(0, 5); // HH:MM
 
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayName = days[selectedDate.getDay()];
@@ -401,16 +397,39 @@ function updateSlotDropdown(selectedDate) {
   );
 
   daySlots.forEach(slot => {
+    // If today, only show future time slots
+    if (selectedDateStr === todayStr) {
+      const slotTime = slot.time.slice(0, 5);
+      if (slotTime < currentTime) {
+        return; // Skip past time slots
+      }
+    }
+
     const option = document.createElement('option');
     option.value = `${slot.time}|${slot.batch}|${slot.subject}`;
     option.textContent = `${slot.time} - ${slot.batch} - ${slot.subject}`;
     slotSelect.appendChild(option);
   });
+
+  if (slotSelect.options.length === 1) {
+    slotSelect.innerHTML += '<option value="" disabled>No available slots for this date</option>';
+  }
 }
 
 document.getElementById('unavailDate').addEventListener('change', function() {
   const selectedDate = new Date(this.value);
   if (!isNaN(selectedDate.getTime())) {
+    // Check if date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      alert('Cannot select a past date');
+      this.value = '';
+      return;
+    }
+    
     updateSlotDropdown(selectedDate);
   }
 });
@@ -421,8 +440,25 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   try {
     const date = document.getElementById("unavailDate").value;
     const slotValue = document.getElementById("unavailSlot").value;
+    
+    if (!date) {
+      alert("Please select a date");
+      return;
+    }
+
     if (!slotValue) {
       alert("Please select a valid time slot");
+      return;
+    }
+
+    // Double-check date isn't in the past
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      alert("Cannot request substitution for past dates");
       return;
     }
 
@@ -444,26 +480,25 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    // Create a nicely formatted alert message
-    const formattedDate = new Date(date).toLocaleDateString('en-US', { 
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    let alertMsg = `Substitution request sent for:\n`;
-    alertMsg += `Date: ${formattedDate}\n`;
-    alertMsg += `Time: ${time}\n`;
-    alertMsg += `Batch: ${batch}\n`;
-    alertMsg += `Subject: ${subject}\n\n`;
+    // Simplified alert - only show teacher names
+    let alertMsg = `Substitution request sent successfully!\n\n`;
     
     if (data.emailedTo?.length > 0) {
-      alertMsg += `Request sent to teachers:\n${data.emailedTo.join('\n')}\n`;
-      alertMsg += `\nEmail notifications have been sent to these teachers.`;
+      alertMsg += `Request sent to:\n${data.emailedTo.join('\n')}\n`;
+      alertMsg += `\nEmail notifications have been sent.`;
+    } else {
+      alertMsg += `No available teachers found.`;
+    }
+
+    if (data.failedEmails?.length > 0) {
+      alertMsg += `\n\nFailed to email: ${data.failedEmails.map(f => f.teacher).join(', ')}`;
     }
 
     alert(alertMsg);
+    
+    // Clear form
+    document.getElementById('unavailForm').reset();
+    
     loadSentRequests();
   } catch (err) {
     console.error("Error:", err);
