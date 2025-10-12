@@ -23,9 +23,9 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: ['https://project-si3z.onrender.com'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: process.env.FRONTEND_URL,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -41,9 +41,9 @@ app.use(session({
   }),
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000
+    secure: true, // for HTTPS
+    sameSite: 'none', // for cross-site cookies
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
 
