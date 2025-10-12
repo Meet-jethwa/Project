@@ -23,12 +23,10 @@ const allowedOrigins = [
 ];
 
 app.use(cors({
-  origin: [
-    'https://project-si3z.onrender.com',  // your frontend Render site
-    'http://127.0.0.1:5500',              // local dev
-    'http://localhost:3000'               // React local dev (optional)
-  ],
-  credentials: true
+  origin: ['https://project-si3z.onrender.com'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 
