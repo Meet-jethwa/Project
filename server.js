@@ -247,6 +247,29 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+async function notifyEmail(to, subject, html, fallbackText = '') {
+  if (!to) return { ok: false, error: 'Missing recipient email' };
+
+  try {
+    await sendEmail(to, subject, html);
+    return { ok: true };
+  } catch (err) {
+    console.error(`sendEmail failed for ${to}: ${err.message}`);
+    try {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to,
+        subject,
+        html,
+        text: fallbackText || html.replace(/<[^>]*>/g, ' ')
+      });
+      return { ok: true };
+    } catch (fallbackErr) {
+      console.error(`Fallback email failed for ${to}: ${fallbackErr.message}`);
+      return { ok: false, error: fallbackErr.message };
+    }
+  }
+}
 
 app.get('/health', (req, res) => {
   const state = mongoose.connection.readyState;
@@ -379,17 +402,24 @@ app.post('/unavailable', asyncHandler(async (req, res) => {
             const acceptLink = `${baseUrl}/respond-email/${encodeURIComponent(sub.name)}/${encodeURIComponent(teacherName)}/${date}/${encodeURIComponent(time)}/${encodeURIComponent(batch)}/${encodeURIComponent(subject)}/accept`;
             const denyLink = `${baseUrl}/respond-email/${encodeURIComponent(sub.name)}/${encodeURIComponent(teacherName)}/${date}/${encodeURIComponent(time)}/${encodeURIComponent(batch)}/${encodeURIComponent(subject)}/deny`;
 
-            await sendEmail(
-                sub.email,
-                'Substitution Request',
-                `
+            const htmlBody = `
                 <h2>Substitution Request</h2>
                 <p>${teacherName} requested a substitution on ${date} at ${time} for ${batch}</p>
                 <p><b>Subject:</b> ${subject}</p>
                 <p><a href="${acceptLink}" style="background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;margin:10px 5px">Accept</a> 
                 <a href="${denyLink}" style="background:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;margin:10px 5px">Decline</a></p>
-                `
+            `;
+
+            const sendResult = await notifyEmail(
+              sub.email,
+              'Substitution Request',
+              htmlBody
             );
+
+            if (!sendResult.ok) {
+              failedEmails.push({ teacher: sub.name, error: sendResult.error });
+              continue;
+            }
 
             emailedTo.push(sub.name);
         } catch (err) {
@@ -490,7 +520,7 @@ app.post('/substitution/respond', asyncHandler(async (req, res) => {
 
     // Notify accepting teacher (YOU accepted)
     if (acceptingTeacher?.email) {
-        await sendEmail(
+        const result = await notifyEmail(
             acceptingTeacher.email,
             'You Accepted a Substitution Request',
             `
@@ -504,11 +534,12 @@ app.post('/substitution/respond', asyncHandler(async (req, res) => {
             <p>Please be present on time. Thank you!</p>
             `
         );
+        if (!result.ok) console.error(`Could not notify accepting teacher ${acceptingTeacher.name}: ${result.error}`);
     }
 
     // Notify original teacher (Your request was accepted)
     if (originalTeacher?.email) {
-        await sendEmail(
+        const result = await notifyEmail(
             originalTeacher.email,
             'Substitution Request Accepted',
             `
@@ -521,12 +552,13 @@ app.post('/substitution/respond', asyncHandler(async (req, res) => {
             <p>Your class will be covered. Thank you!</p>
             `
         );
+        if (!result.ok) console.error(`Could not notify original teacher ${originalTeacher.name}: ${result.error}`);
     }
 
     // Notify students
     for (const student of students) {
         if (!student.email) continue;
-        await sendEmail(
+        const result = await notifyEmail(
             student.email,
             'Lecture Update - Change in Faculty',
             `
@@ -541,12 +573,12 @@ app.post('/substitution/respond', asyncHandler(async (req, res) => {
             <p>Please attend the class as scheduled.</p>
             `
         );
+        if (!result.ok) console.error(`Could not notify student ${student.name}: ${result.error}`);
     }
 
     return res.json({ success: true, message: 'Request accepted and notifications sent to all parties.' });
 }));
 
-// Keep email link endpoint for backward compatibility (redirects to unified endpoint)
 app.get('/respond-email/:sub/:org/:date/:time/:batch/:subject/:action', asyncHandler(async (req, res) => {
     const { sub, org, date, time, batch, subject, action } = req.params;
 
@@ -618,20 +650,25 @@ app.get('/respond-email/:sub/:org/:date/:time/:batch/:subject/:action', asyncHan
         const students = await Student.find({ batch });
 
         if (originalTeacher?.email) {
-            await sendEmail(originalTeacher.email, 'Substitution Confirmed',
-                `<h2>Substitution Confirmed</h2>
-                <p>${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.</p>`
+            const result = await notifyEmail(
+              originalTeacher.email,
+              'Substitution Confirmed',
+              `<h2>Substitution Confirmed</h2>
+               <p>${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.</p>`
             );
+            if (!result.ok) console.error(`Could not notify original teacher ${originalTeacher.name}: ${result.error}`);
         }
 
         for (const student of students) {
-            if (student.email) {
-                await sendEmail(student.email, 'Lecture Update',
-                    `<h2>Lecture Update</h2>
-                    <p>Dear ${student.name},</p>
-                    <p>Your ${subject} lecture on ${date} at ${time} will be taken by ${sub}.</p>`
-                );
-            }
+            if (!student.email) continue;
+            const result = await notifyEmail(
+              student.email,
+              'Lecture Update',
+              `<h2>Lecture Update</h2>
+               <p>Dear ${student.name},</p>
+               <p>Your ${subject} lecture on ${date} at ${time} will be taken by ${sub}.</p>`
+            );
+            if (!result.ok) console.error(`Could not notify student ${student.name}: ${result.error}`);
         }
 
         return res.send('Request accepted and all parties notified.');
