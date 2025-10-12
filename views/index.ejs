@@ -220,7 +220,7 @@ async function loadTimetable() {
 }
 
 async function loadRequests() {
-  const res = await fetch('https://project-si3z.onrender.com/substitute-requests', { credentials: 'include' });
+  const res = await fetch('/substitute-requests', { credentials: 'include' });
   const data = await res.json();
   console.log("Substitute requests received:", data.requests);
 
@@ -246,7 +246,7 @@ async function loadRequests() {
 }
 
 async function loadSentRequests() {
-  const res = await fetch('https://project-si3z.onrender.com/sent-requests', { credentials: 'include' });
+  const res = await fetch('/sent-requests', { credentials: 'include' });
   const data = await res.json();
 
   const body = document.getElementById("sentRequestsBody");
@@ -266,7 +266,7 @@ async function loadSentRequests() {
 }
 
 async function loadHistory() {
-  const res = await fetch('https://project-si3z.onrender.com/substitution-history', { credentials: 'include' });
+  const res = await fetch('/substitution-history', { credentials: 'include' });
   const data = await res.json();
   const table = document.getElementById('historyBody');
   table.innerHTML = '';
@@ -394,7 +394,7 @@ document.getElementById('unavailDate').addEventListener('change', function() {
 
 document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  console.log("✅ FORM SUBMITTED");
+  console.log("FORM SUBMITTED");
 
   const date = document.getElementById("unavailDate").value;
   const slotValue = document.getElementById("unavailSlot").value;
@@ -408,7 +408,7 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
   const [time, batch, subject] = slotValue.split('|');
 
   try {
-    const res = await fetch("https://project-si3z.onrender.com/unavailable", {
+    const res = await fetch("/unavailable", {
       method: "POST",
       credentials: "include", 
       headers: {
