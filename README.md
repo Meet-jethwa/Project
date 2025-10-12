@@ -1,8 +1,17 @@
 A web application designed to automate and streamline the teacher substitution process in educational institutions. It helps manage teacher unavailability, sends substitution requests, and updates timetables in real time.
 
-npm install @sendgrid/mail bcrypt body-parser cookie-parser cors dotenv ejs express express-session jsonwebtoken mongoose nodemailer nodemon path pdf-image pdf-parse pdf2pic socket.io tesseract.js
+## Setup
 
-for running the code :
+This project uses npm as the package manager. Please use npm (not yarn) to avoid dependency conflicts.
+
+```bash
+npm install
+```
+
+## Running the code
+
+```bash
 npm start
+```
 
 
