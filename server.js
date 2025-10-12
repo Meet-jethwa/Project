@@ -24,10 +24,9 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: process.env.FRONTEND_URL,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
+
 
 
 app.use(bodyParser.json());
@@ -36,14 +35,14 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI, // from your .env
-    ttl: 14 * 24 * 60 * 60 // = 14 days
+    mongoUrl: process.env.MONGO_URI,
+    ttl: 14 * 24 * 60 * 60
   }),
   cookie: {
     httpOnly: true,
-    secure: true, // for HTTPS
-    sameSite: 'none', // for cross-site cookies
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -152,21 +151,15 @@ mongoose.connect(uri, { dbName: 'teachers' })
       const username = req.body.username.trim();
       const password = req.body.password.trim();
 
-      console.log("Login attempt:", { username, password });
-
       const teacher = await Teacher.findOne({ name: new RegExp(`^${username}$`, 'i') });
-      console.log("Fetched teacher:", teacher);
+      console.log("Login attempt:", { username });
 
       if (teacher && teacher.password === password) {
         req.session.teacher = teacher.name;
         return res.json({ success: true });
-      } else {
-        return res.json({ success: false, message: 'Invalid credentials' });
       }
-
-
-      console.log("Invalid credentials");
-      res.json({ success: false, message: 'Invalid credentials' });
+      
+      return res.json({ success: false, message: 'Invalid credentials' });
     });
 
     app.get('/logout', (req, res) => {
@@ -215,7 +208,6 @@ mongoose.connect(uri, { dbName: 'teachers' })
         const teacherName = req.session.teacher;
         if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
 
-        // Check if request already exists
         const existingRequest = await Request.findOne({
             teacher: teacherName,
             date,

@@ -338,12 +338,10 @@ function updateTimetableDisplay(selectedDate) {
 
 async function respond(requestId, agree) {
   try {
-    const res = await fetch("/respond", {
+    const res = await fetch(`${backendURL}/respond`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ requestId, agree })
     });
 
@@ -361,7 +359,7 @@ async function respond(requestId, agree) {
 
 async function respondToRequest(requestId, agree) {
   try {
-    const res = await fetch('/respond', {
+    const res = await fetch(`${backendURL}/respond`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
