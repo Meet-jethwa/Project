@@ -71,9 +71,8 @@ mongoose.connect(uri, { dbName: 'teachers' })
       { $set: { "timetable.$[].day": "Monday" } }
     );
 
-    
     // Add async handler wrapper
-const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+    const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 app.get('/timetable', asyncHandler(async (req, res) => {
   const teacherName = req.session.teacher;
@@ -682,7 +681,27 @@ app.get('/substitute-requests', asyncHandler(async (req, res) => {
   res.json({ requests });
 }));
 
-// Add error handler middleware
+// Add missing root route
+app.get('/', (req, res) => {
+  res.render('show');
+});
+
+app.get('/home', async (req, res) => {
+  const teacher = await Teacher.findOne({ name: req.session.teacher });
+  if (!teacher) return res.redirect('/');
+
+  res.render('home', {
+    name: teacher.name,
+    email: teacher.email || `${teacher.name.toLowerCase()}@somaiya.edu`
+  });
+});
+
+app.get('/substitution', (req, res) => {
+  if (!req.session.teacher) return res.redirect('/');
+  res.render('index', { teacherName: req.session.teacher });
+});
+
+// Error handler middleware (must be last)
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ 
@@ -691,21 +710,23 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Listen on the port AFTER mongoose connection setup
-// This ensures the server starts even if inside the .then() block
-const server = app.listen(PORT, '0.0.0.0', () => {
-
-
-
-});    console.log(`✅ Connected to MongoDB`);    console.log(`✅ Server running on port ${PORT}`);    console.log(`✅ Server running on port ${PORT}`);
+// Start server INSIDE mongoose .then()
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`✅ Connected to MongoDB`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+})
+})
+.catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
 });
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
-    console.log('SIGTERM received, closing server...');
-    server.close(() => {
-        console.log('Server closed');
-        mongoose.connection.close();
+    console.log('SIGTERM received, shutting down gracefully...');
+    mongoose.connection.close(() => {
+        console.log('MongoDB connection closed');
+        process.exit(0);
     });
 });
