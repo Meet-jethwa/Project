@@ -6,6 +6,7 @@ const MongoStore = require("connect-mongo");
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
+const sendEmail = require('./utils/sendEmail');
 const nodemailer = require('nodemailer');
 const Student = require('./models/Student'); 
 const Teacher = require('./models/Teacher');
@@ -251,7 +252,7 @@ mongoose.connect(uri, { dbName: 'teachers' })
                     ? (sub.timetable.find(slot => slot.batch === batch)?.subject || subject)
                     : subject;
 
-                const newRequest = new Request({
+                const newRequest = await Request.create({
                     teacher: teacherName,
                     substitute: sub.name,
                     date,
@@ -262,24 +263,25 @@ mongoose.connect(uri, { dbName: 'teachers' })
                     status: 'pending',
                     requestedBy: teacherName
                 });
-                await newRequest.save();
 
-                const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+                const baseUrl = process.env.BASE_URL;
                 const acceptLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/accept`;
                 const denyLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/deny`;
 
-
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: sub.email,
-                    subject: `Substitution Request`,
-                    html: `<p>${teacherName} requested a substitution on ${date} at ${time} for ${batch} (Subject: ${subject}).</p>
-                            <p><a href="${acceptLink}">Accept</a> | <a href="${denyLink}">Decline</a></p>`
-                });
+                await sendEmail(
+                    sub.email,
+                    'Substitution Request',
+                    `
+                    <h2>Substitution Request</h2>
+                    <p>${teacherName} requested a substitution on ${date} at ${time} for ${batch}</p>
+                    <p><b>Subject:</b> ${subject}</p>
+                    <p><a href="${acceptLink}">Accept</a> | <a href="${denyLink}">Decline</a></p>
+                    `
+                );
 
                 emailedTo.push(sub.name);
             } catch (err) {
-                console.error(`Failed to send email to ${sub.name}:`, err);
+                console.error(`Failed to process request for ${sub.name}:`, err);
                 failedEmails.push({ teacher: sub.name, error: err.message });
             }
         }
@@ -432,71 +434,84 @@ mongoose.connect(uri, { dbName: 'teachers' })
         }
 
         if (agree) {
-            reqDoc.status = `Accepted by ${teacherName}`;
-            await reqDoc.save();
+            try {
+                reqDoc.status = `Accepted by ${teacherName}`;
+                await reqDoc.save();
 
-            const acceptingTeacher = await Teacher.findOne({ name: teacherName });
-            const originalTeacher = await Teacher.findOne({ name: reqDoc.teacher });
-            const students = await Student.find({ batch: reqDoc.batch });
+                const acceptingTeacher = await Teacher.findOne({ name: teacherName });
+                const originalTeacher = await Teacher.findOne({ name: reqDoc.teacher });
+                const students = await Student.find({ batch: reqDoc.batch });
 
-            let acceptedSubject = reqDoc.subject;
-            if (reqDoc.allowAny) {
-                const timetableEntry = acceptingTeacher.timetable.find(slot =>
-                  slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
-                  slot.time === reqDoc.time &&
-                  slot.batch === reqDoc.batch
+                let acceptedSubject = reqDoc.subject;
+                if (reqDoc.allowAny) {
+                    const timetableEntry = acceptingTeacher.timetable.find(slot =>
+                      slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
+                      slot.time === reqDoc.time &&
+                      slot.batch === reqDoc.batch
+                    );
+
+                    acceptedSubject = timetableEntry?.subject || acceptingTeacher.subject;
+                }
+
+                await SubstitutionHistory.create({
+                    teacher: reqDoc.teacher,
+                    substitute: teacherName,
+                    subject: reqDoc.subject,
+                    acceptedSubject,
+                    batch: reqDoc.batch,
+                    time: reqDoc.time,
+                    date: reqDoc.date,
+                    acceptedAt: new Date()
+                });
+
+                await Request.deleteMany({
+                    _id: { $ne: reqDoc._id },
+                    teacher: reqDoc.teacher,
+                    date: reqDoc.date,
+                    time: reqDoc.time,
+                    batch: reqDoc.batch,
+                    subject: reqDoc.subject,
+                    status: 'pending'
+                });
+
+                await sendEmail(
+                    originalTeacher.email,
+                    'Substitution Confirmed',
+                    `
+                    <h2>Substitution Confirmed</h2>
+                    <p>${teacherName} will take your ${reqDoc.subject} lecture.</p>
+                    <p><b>Date:</b> ${reqDoc.date}</p>
+                    <p><b>Time:</b> ${reqDoc.time}</p>
+                    <p><b>Batch:</b> ${reqDoc.batch}</p>
+                    `
                 );
 
-                acceptedSubject = timetableEntry?.subject || acceptingTeacher.subject;
-            }
+                // Notify students
+                for (const student of students) {
+                    if (!student.email) continue;
+                    await sendEmail(
+                        student.email,
+                        'Lecture Update',
+                        `
+                        <h2>Lecture Update</h2>
+                        <p>Dear ${student.name},</p>
+                        <p>Your lecture/lab for ${reqDoc.subject} will be taken by ${teacherName}.</p>
+                        <p><b>Date:</b> ${reqDoc.date}</p>
+                        <p><b>Time:</b> ${reqDoc.time}</p>
+                        <p><b>Subject:</b> ${acceptedSubject}</p>
+                        `
+                    );
+                }
 
-            await SubstitutionHistory.create({
-                teacher: reqDoc.teacher,
-                substitute: teacherName,
-                subject: reqDoc.subject,
-                acceptedSubject,
-                batch: reqDoc.batch,
-                time: reqDoc.time,
-                date: reqDoc.date,
-                acceptedAt: new Date()
-            });
-
-            await Request.deleteMany({
-                _id: { $ne: reqDoc._id },
-                teacher: reqDoc.teacher,
-                date: reqDoc.date,
-                time: reqDoc.time,
-                batch: reqDoc.batch,
-                subject: reqDoc.subject,
-                status: 'pending'
-            });
-
-            await transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: acceptingTeacher.email,
-                subject: `You accepted a substitution`,
-                text: `You will take a ${acceptedSubject} lecture for ${reqDoc.batch} at ${reqDoc.time} on ${reqDoc.date}.`
-            });
-
-            await transporter.sendMail({
-                from: process.env.EMAIL_USER,
-                to: originalTeacher.email,
-                subject: `Substitution Confirmed`,
-                text: `${teacherName} will take your ${reqDoc.subject} lecture for ${reqDoc.batch} at ${reqDoc.time} on ${reqDoc.date}.`
-            });
-
-            for (const student of students) {
-                if (!student.email) continue;
-
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: student.email,
-                    subject: 'Substitution Lecture Alert',
-                    text: `Dear ${student.name},\n\nYour lecture/lab for ${reqDoc.subject} on ${reqDoc.date} at ${reqDoc.time} will be taken by ${teacherName}, their subject is ${acceptedSubject}.`
+                return res.json({ success: true, message: 'Request accepted and notifications sent.' });
+            } catch (err) {
+                console.error('Error in email notifications:', err);
+                return res.json({ 
+                    success: true, 
+                    message: 'Request accepted but some notifications failed.',
+                    error: err.message 
                 });
             }
-
-            return res.json({ success: true, message: 'Request accepted.' });
         } else {
             reqDoc.status = 'declined';
             await reqDoc.save();
