@@ -299,111 +299,217 @@ mongoose.connect(uri, { dbName: 'teachers' })
         });
     });
 
+    // app.get('/respond-email/:sub/:org/:date/:time/:batch/:subject/:action', async (req, res) => {
+    //     const { sub, org, date, time, batch, subject, action } = req.params;
+
+    //     // Check if already accepted by someone
+    //     const existingAccepted = await SubstitutionHistory.findOne({
+    //         teacher: org,
+    //         date,
+    //         time,
+    //         batch,
+    //         subject
+    //     });
+
+    //     if (existingAccepted) {
+    //         return res.send(`This substitution request has already been accepted by ${existingAccepted.substitute}`);
+    //     }
+
+    //     const reqDoc = await Request.findOne({
+    //         teacher: org,
+    //         substitute: sub,
+    //         date,
+    //         time,
+    //         batch,
+    //         subject,
+    //         status: 'pending'
+    //     });
+
+    //     if (!reqDoc) return res.send('Invalid or already processed request.');
+
+    //     if (action === 'accept') {
+    //         reqDoc.status = `Accepted by ${sub}`;
+    //         await reqDoc.save();
+
+    //         let acceptedSubject = subject;
+    //         if (reqDoc.allowAny) {
+    //             const substituteTeacher = await Teacher.findOne({ name: sub });
+    //             const timetableEntry = substituteTeacher?.timetable.find(slot =>  // Fixed reference
+    //               slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
+    //               slot.time === reqDoc.time &&
+    //               slot.batch === reqDoc.batch
+    //             );
+
+    //             acceptedSubject = timetableEntry?.subject || substituteTeacher?.subject || subject;
+    //         }
+
+    //         await SubstitutionHistory.create({
+    //             teacher: org,
+    //             substitute: sub,
+    //             subject,
+    //             acceptedSubject,
+    //             batch,
+    //             time,
+    //             date,
+    //             acceptedAt: new Date()
+    //         });
+
+    //         await Request.deleteMany({
+    //             _id: { $ne: reqDoc._id },
+    //             teacher: org,
+    //             date,
+    //             time,
+    //             batch,
+    //             subject,
+    //             status: 'pending'
+    //         });
+
+    //         const acceptingTeacher = await Teacher.findOne({ name: sub });
+    //         const originalTeacher = await Teacher.findOne({ name: org });
+    //         const students = await Student.find({ batch });
+
+    //         if (acceptingTeacher?.email) {
+    //             await transporter.sendMail({
+    //                 from: process.env.EMAIL_USER,
+    //                 to: acceptingTeacher.email,
+    //                 subject: 'You accepted a substitution',
+    //                 text: `You will take the ${acceptedSubject} lecture for ${batch} at ${time} on ${date}.`
+    //             });
+    //         }
+
+    //         if (originalTeacher?.email) {
+    //             await transporter.sendMail({
+    //                 from: process.env.EMAIL_USER,
+    //                 to: originalTeacher.email,
+    //                 subject: 'Substitution Confirmed',
+    //                 text: `${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.`
+    //             });
+    //         }
+
+    //         for (const student of students) {
+    //             if (!student.email) continue;
+
+    //             await transporter.sendMail({
+    //                 from: process.env.EMAIL_USER,
+    //                 to: student.email,
+    //                 subject: 'Substitution Lecture Alert',
+    //                 text: `Dear ${student.name},\n\nYour lec/lab for ${subject} on ${date} at ${time} is being taken by ${sub}, their subject is ${acceptedSubject}.`
+    //             });
+    //         }
+
+    //         return res.send('✅ Request accepted and all parties notified.');
+    //     } else {
+    //         reqDoc.status = 'declined';
+    //         await reqDoc.save();
+    //         return res.send('❌ Request declined.');
+    //     }
+    // });
+
     app.get('/respond-email/:sub/:org/:date/:time/:batch/:subject/:action', async (req, res) => {
-        const { sub, org, date, time, batch, subject, action } = req.params;
+      const { sub, org, date, time, batch, subject, action } = req.params;
 
-        // Check if already accepted by someone
-        const existingAccepted = await SubstitutionHistory.findOne({
-            teacher: org,
-            date,
-            time,
-            batch,
-            subject
-        });
+      // 1️⃣ Check if this substitution slot is already accepted
+      const existingAccepted = await SubstitutionHistory.findOne({
+          teacher: org,
+          date,
+          time,
+          batch,
+          subject
+      });
 
-        if (existingAccepted) {
-            return res.send(`This substitution request has already been accepted by ${existingAccepted.substitute}`);
-        }
+      if (existingAccepted) {
+          return res.send(`This substitution request has already been accepted by ${existingAccepted.substitute}`);
+      }
 
-        const reqDoc = await Request.findOne({
-            teacher: org,
-            substitute: sub,
-            date,
-            time,
-            batch,
-            subject,
-            status: 'pending'
-        });
+      const reqDoc = await Request.findOne({
+          teacher: org,
+          substitute: sub,
+          date,
+          time,
+          batch,
+          subject,
+          status: 'pending'
+      });
 
-        if (!reqDoc) return res.send('Invalid or already processed request.');
+      if (!reqDoc) {
+          return res.send('Invalid or already processed request.');
+      }
 
-        if (action === 'accept') {
-            reqDoc.status = `Accepted by ${sub}`;
-            await reqDoc.save();
+      if (action === 'accept') {
+          reqDoc.status = `Accepted by ${sub}`;
+          await reqDoc.save();
 
-            let acceptedSubject = subject;
-            if (reqDoc.allowAny) {
-                const substituteTeacher = await Teacher.findOne({ name: sub });
-                const timetableEntry = substituteTeacher?.timetable.find(slot =>  // Fixed reference
+          let acceptedSubject = subject;
+          if (reqDoc.allowAny) {
+              const substituteTeacher = await Teacher.findOne({ name: sub });
+              const timetableEntry = substituteTeacher?.timetable.find(slot =>
                   slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
                   slot.time === reqDoc.time &&
                   slot.batch === reqDoc.batch
-                );
+              );
+              acceptedSubject = timetableEntry?.subject || substituteTeacher?.subject || subject;
+          }
 
-                acceptedSubject = timetableEntry?.subject || substituteTeacher?.subject || subject;
-            }
+          await SubstitutionHistory.create({
+              teacher: org,
+              substitute: sub,
+              subject,
+              acceptedSubject,
+              batch,
+              time,
+              date,
+              acceptedAt: new Date()
+          });
 
-            await SubstitutionHistory.create({
-                teacher: org,
-                substitute: sub,
-                subject,
-                acceptedSubject,
-                batch,
-                time,
-                date,
-                acceptedAt: new Date()
-            });
+          await Request.deleteMany({
+              _id: { $ne: reqDoc._id },
+              teacher: org,
+              date,
+              time,
+              batch,
+              subject,
+              status: 'pending'
+          });
 
-            await Request.deleteMany({
-                _id: { $ne: reqDoc._id },
-                teacher: org,
-                date,
-                time,
-                batch,
-                subject,
-                status: 'pending'
-            });
+          const acceptingTeacher = await Teacher.findOne({ name: sub });
+          const originalTeacher = await Teacher.findOne({ name: org });
+          const students = await Student.find({ batch });
 
-            const acceptingTeacher = await Teacher.findOne({ name: sub });
-            const originalTeacher = await Teacher.findOne({ name: org });
-            const students = await Student.find({ batch });
+          if (acceptingTeacher?.email) {
+              await transporter.sendMail({
+                  from: process.env.EMAIL_USER,
+                  to: acceptingTeacher.email,
+                  subject: 'You accepted a substitution',
+                  text: `You will take the ${acceptedSubject} lecture for ${batch} at ${time} on ${date}.`
+              });
+          }
 
-            if (acceptingTeacher?.email) {
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: acceptingTeacher.email,
-                    subject: 'You accepted a substitution',
-                    text: `You will take the ${acceptedSubject} lecture for ${batch} at ${time} on ${date}.`
-                });
-            }
+          if (originalTeacher?.email) {
+              await transporter.sendMail({
+                  from: process.env.EMAIL_USER,
+                  to: originalTeacher.email,
+                  subject: 'Substitution Confirmed',
+                  text: `${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.`
+              });
+          }
 
-            if (originalTeacher?.email) {
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: originalTeacher.email,
-                    subject: 'Substitution Confirmed',
-                    text: `${sub} will take your ${subject} lecture for ${batch} at ${time} on ${date}.`
-                });
-            }
+          for (const student of students) {
+              if (!student.email) continue;
+              await transporter.sendMail({
+                  from: process.env.EMAIL_USER,
+                  to: student.email,
+                  subject: 'Substitution Lecture Alert',
+                  text: `Dear ${student.name},\n\nYour lec/lab for ${subject} on ${date} at ${time} is being taken by ${sub}, their subject is ${acceptedSubject}.`
+              });
+          }
 
-            for (const student of students) {
-                if (!student.email) continue;
-
-                await transporter.sendMail({
-                    from: process.env.EMAIL_USER,
-                    to: student.email,
-                    subject: 'Substitution Lecture Alert',
-                    text: `Dear ${student.name},\n\nYour lec/lab for ${subject} on ${date} at ${time} is being taken by ${sub}, their subject is ${acceptedSubject}.`
-                });
-            }
-
-            return res.send('✅ Request accepted and all parties notified.');
-        } else {
-            reqDoc.status = 'declined';
-            await reqDoc.save();
-            return res.send('❌ Request declined.');
-        }
-    });
+          return res.send('Request accepted and all parties notified.');
+      } else {
+          reqDoc.status = 'declined';
+          await reqDoc.save();
+          return res.send('Request declined.');
+      }
+  });
 
 
     app.get('/sent-requests', async (req, res) => {
@@ -423,101 +529,219 @@ mongoose.connect(uri, { dbName: 'teachers' })
     });
 
 
+    // app.post('/respond', async (req, res) => {
+    //     const teacherName = req.session.teacher;
+    //     const { requestId, agree } = req.body;
+    //     if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
+
+    //     const reqDoc = await Request.findById(requestId);
+    //     if (!reqDoc || reqDoc.substitute !== teacherName) {
+    //         return res.status(400).json({ error: 'Invalid request' });
+    //     }
+
+    //     if (agree) {
+    //         try {
+    //             reqDoc.status = `Accepted by ${teacherName}`;
+    //             await reqDoc.save();
+
+    //             const acceptingTeacher = await Teacher.findOne({ name: teacherName });
+    //             const originalTeacher = await Teacher.findOne({ name: reqDoc.teacher });
+    //             const students = await Student.find({ batch: reqDoc.batch });
+
+    //             let acceptedSubject = reqDoc.subject;
+    //             if (reqDoc.allowAny) {
+    //                 const timetableEntry = acceptingTeacher.timetable.find(slot =>
+    //                   slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
+    //                   slot.time === reqDoc.time &&
+    //                   slot.batch === reqDoc.batch
+    //                 );
+
+    //                 acceptedSubject = timetableEntry?.subject || acceptingTeacher.subject;
+    //             }
+
+    //             await SubstitutionHistory.create({
+    //                 teacher: reqDoc.teacher,
+    //                 substitute: teacherName,
+    //                 subject: reqDoc.subject,
+    //                 acceptedSubject,
+    //                 batch: reqDoc.batch,
+    //                 time: reqDoc.time,
+    //                 date: reqDoc.date,
+    //                 acceptedAt: new Date()
+    //             });
+
+    //             await Request.deleteMany({
+    //                 _id: { $ne: reqDoc._id },
+    //                 teacher: reqDoc.teacher,
+    //                 date: reqDoc.date,
+    //                 time: reqDoc.time,
+    //                 batch: reqDoc.batch,
+    //                 subject: reqDoc.subject,
+    //                 status: 'pending'
+    //             });
+
+    //             await sendEmail(
+    //                 originalTeacher.email,
+    //                 'Substitution Confirmed',
+    //                 `
+    //                 <h2>Substitution Confirmed</h2>
+    //                 <p>${teacherName} will take your ${reqDoc.subject} lecture.</p>
+    //                 <p><b>Date:</b> ${reqDoc.date}</p>
+    //                 <p><b>Time:</b> ${reqDoc.time}</p>
+    //                 <p><b>Batch:</b> ${reqDoc.batch}</p>
+    //                 `
+    //             );
+
+    //             // Notify students
+    //             for (const student of students) {
+    //                 if (!student.email) continue;
+    //                 await sendEmail(
+    //                     student.email,
+    //                     'Lecture Update',
+    //                     `
+    //                     <h2>Lecture Update</h2>
+    //                     <p>Dear ${student.name},</p>
+    //                     <p>Your lecture/lab for ${reqDoc.subject} will be taken by ${teacherName}.</p>
+    //                     <p><b>Date:</b> ${reqDoc.date}</p>
+    //                     <p><b>Time:</b> ${reqDoc.time}</p>
+    //                     <p><b>Subject:</b> ${acceptedSubject}</p>
+    //                     `
+    //                 );
+    //             }
+
+    //             return res.json({ success: true, message: 'Request accepted and notifications sent.' });
+    //         } catch (err) {
+    //             console.error('Error in email notifications:', err);
+    //             return res.json({ 
+    //                 success: true, 
+    //                 message: 'Request accepted but some notifications failed.',
+    //                 error: err.message 
+    //             });
+    //         }
+    //     } else {
+    //         reqDoc.status = 'declined';
+    //         await reqDoc.save();
+    //         return res.json({ success: true, message: 'Request declined.' });
+    //     }
+    // });
+
     app.post('/respond', async (req, res) => {
-        const teacherName = req.session.teacher;
-        const { requestId, agree } = req.body;
-        if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
+      const teacherName = req.session.teacher;
+      const { requestId, agree } = req.body;
 
-        const reqDoc = await Request.findById(requestId);
-        if (!reqDoc || reqDoc.substitute !== teacherName) {
-            return res.status(400).json({ error: 'Invalid request' });
-        }
+      if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
 
-        if (agree) {
-            try {
-                reqDoc.status = `Accepted by ${teacherName}`;
-                await reqDoc.save();
+      const reqDoc = await Request.findById(requestId);
+      if (!reqDoc || reqDoc.substitute !== teacherName) {
+          return res.status(400).json({ error: 'Invalid request' });
+      }
 
-                const acceptingTeacher = await Teacher.findOne({ name: teacherName });
-                const originalTeacher = await Teacher.findOne({ name: reqDoc.teacher });
-                const students = await Student.find({ batch: reqDoc.batch });
+      // 1️⃣ Check if this slot is already accepted
+      const existingAccepted = await SubstitutionHistory.findOne({
+          teacher: reqDoc.teacher,
+          date: reqDoc.date,
+          time: reqDoc.time,
+          batch: reqDoc.batch,
+          subject: reqDoc.subject
+      });
 
-                let acceptedSubject = reqDoc.subject;
-                if (reqDoc.allowAny) {
-                    const timetableEntry = acceptingTeacher.timetable.find(slot =>
+      if (existingAccepted) {
+          return res.json({
+              success: false,
+              message: `This request has already been accepted by ${existingAccepted.substitute}.`
+          });
+      }
+
+      if (agree) {
+          try {
+              // 2️⃣ Accept the request
+              reqDoc.status = `Accepted by ${teacherName}`;
+              await reqDoc.save();
+
+              const acceptingTeacher = await Teacher.findOne({ name: teacherName });
+              const originalTeacher = await Teacher.findOne({ name: reqDoc.teacher });
+              const students = await Student.find({ batch: reqDoc.batch });
+
+              // Determine actual subject if allowAny
+              let acceptedSubject = reqDoc.subject;
+              if (reqDoc.allowAny) {
+                  const timetableEntry = acceptingTeacher.timetable.find(slot =>
                       slot.day === new Date(reqDoc.date).toLocaleDateString('en-US', { weekday: 'long' }) &&
                       slot.time === reqDoc.time &&
                       slot.batch === reqDoc.batch
-                    );
+                  );
+                  acceptedSubject = timetableEntry?.subject || acceptingTeacher.subject;
+              }
 
-                    acceptedSubject = timetableEntry?.subject || acceptingTeacher.subject;
-                }
+              // 3️⃣ Save to SubstitutionHistory
+              await SubstitutionHistory.create({
+                  teacher: reqDoc.teacher,
+                  substitute: teacherName,
+                  subject: reqDoc.subject,
+                  acceptedSubject,
+                  batch: reqDoc.batch,
+                  time: reqDoc.time,
+                  date: reqDoc.date,
+                  acceptedAt: new Date()
+              });
 
-                await SubstitutionHistory.create({
-                    teacher: reqDoc.teacher,
-                    substitute: teacherName,
-                    subject: reqDoc.subject,
-                    acceptedSubject,
-                    batch: reqDoc.batch,
-                    time: reqDoc.time,
-                    date: reqDoc.date,
-                    acceptedAt: new Date()
-                });
+              // 4️⃣ Delete other pending requests for this slot
+              await Request.deleteMany({
+                  _id: { $ne: reqDoc._id },
+                  teacher: reqDoc.teacher,
+                  date: reqDoc.date,
+                  time: reqDoc.time,
+                  batch: reqDoc.batch,
+                  subject: reqDoc.subject,
+                  status: 'pending'
+              });
 
-                await Request.deleteMany({
-                    _id: { $ne: reqDoc._id },
-                    teacher: reqDoc.teacher,
-                    date: reqDoc.date,
-                    time: reqDoc.time,
-                    batch: reqDoc.batch,
-                    subject: reqDoc.subject,
-                    status: 'pending'
-                });
+              // 5️⃣ Send notifications using sendEmail helper
+              if (originalTeacher?.email) {
+                  await sendEmail(
+                      originalTeacher.email,
+                      'Substitution Confirmed',
+                      `
+                      <h2>Substitution Confirmed</h2>
+                      <p>${teacherName} will take your ${reqDoc.subject} lecture.</p>
+                      <p><b>Date:</b> ${reqDoc.date}</p>
+                      <p><b>Time:</b> ${reqDoc.time}</p>
+                      <p><b>Batch:</b> ${reqDoc.batch}</p>
+                      `
+                  );
+              }
 
-                await sendEmail(
-                    originalTeacher.email,
-                    'Substitution Confirmed',
-                    `
-                    <h2>Substitution Confirmed</h2>
-                    <p>${teacherName} will take your ${reqDoc.subject} lecture.</p>
-                    <p><b>Date:</b> ${reqDoc.date}</p>
-                    <p><b>Time:</b> ${reqDoc.time}</p>
-                    <p><b>Batch:</b> ${reqDoc.batch}</p>
-                    `
-                );
+              for (const student of students) {
+                  if (!student.email) continue;
+                  await sendEmail(
+                      student.email,
+                      'Lecture Update',
+                      `
+                      <h2>Lecture Update</h2>
+                      <p>Dear ${student.name},</p>
+                      <p>Your lecture/lab for ${reqDoc.subject} will be taken by ${teacherName}.</p>
+                      <p><b>Date:</b> ${reqDoc.date}</p>
+                      <p><b>Time:</b> ${reqDoc.time}</p>
+                      <p><b>Subject:</b> ${acceptedSubject}</p>
+                      `
+                  );
+              }
 
-                // Notify students
-                for (const student of students) {
-                    if (!student.email) continue;
-                    await sendEmail(
-                        student.email,
-                        'Lecture Update',
-                        `
-                        <h2>Lecture Update</h2>
-                        <p>Dear ${student.name},</p>
-                        <p>Your lecture/lab for ${reqDoc.subject} will be taken by ${teacherName}.</p>
-                        <p><b>Date:</b> ${reqDoc.date}</p>
-                        <p><b>Time:</b> ${reqDoc.time}</p>
-                        <p><b>Subject:</b> ${acceptedSubject}</p>
-                        `
-                    );
-                }
-
-                return res.json({ success: true, message: 'Request accepted and notifications sent.' });
-            } catch (err) {
-                console.error('Error in email notifications:', err);
-                return res.json({ 
-                    success: true, 
-                    message: 'Request accepted but some notifications failed.',
-                    error: err.message 
-                });
-            }
-        } else {
-            reqDoc.status = 'declined';
-            await reqDoc.save();
-            return res.json({ success: true, message: 'Request declined.' });
-        }
-    });
+              return res.json({ success: true, message: '✅ Request accepted and notifications sent.' });
+          } catch (err) {
+              console.error('Error in email notifications:', err);
+              return res.json({ 
+                  success: true, 
+                  message: 'Request accepted but some notifications failed.',
+                  error: err.message 
+              });
+          }
+      } else {
+          reqDoc.status = 'declined';
+          await reqDoc.save();
+          return res.json({ success: true, message: '❌ Request declined.' });
+      }
+  });
 
 
     app.get('/substitution-history', async (req, res) => {
