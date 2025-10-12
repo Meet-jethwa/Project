@@ -446,12 +446,26 @@ document.getElementById("unavailForm").addEventListener("submit", async (e) => {
       return;
     }
 
-    let alertMsg = data.message || "Substitution request sent.";
-    if (data.emailedTo?.length > 0) {
-      alertMsg += `\nMail sent to: ${data.emailedTo.join(', ')}`;
-    }
-    alert(alertMsg);
+    // Create a nicely formatted alert message
+    const formattedDate = new Date(date).toLocaleDateString('en-US', { 
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
 
+    let alertMsg = `Substitution request sent for:\n`;
+    alertMsg += `Date: ${formattedDate}\n`;
+    alertMsg += `Time: ${time}\n`;
+    alertMsg += `Batch: ${batch}\n`;
+    alertMsg += `Subject: ${subject}\n\n`;
+    
+    if (data.emailedTo?.length > 0) {
+      alertMsg += `Request sent to teachers:\n${data.emailedTo.join('\n')}\n`;
+      alertMsg += `\nEmail notifications have been sent to these teachers.`;
+    }
+
+    alert(alertMsg);
     loadSentRequests();
   } catch (err) {
     console.error("Error:", err);

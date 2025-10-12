@@ -215,6 +215,23 @@ mongoose.connect(uri, { dbName: 'teachers' })
         const teacherName = req.session.teacher;
         if (!teacherName) return res.status(403).json({ error: 'Not logged in' });
 
+        // Check if request already exists
+        const existingRequest = await Request.findOne({
+            teacher: teacherName,
+            date,
+            time,
+            batch,
+            subject,
+            status: 'pending'
+        });
+
+        if (existingRequest) {
+            return res.json({ 
+                success: false, 
+                message: "You have already requested substitution for this lecture/lab and it's pending." 
+            });
+        }
+
         const day = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
         const allTeachers = await Teacher.find({ name: { $ne: teacherName } });
 
@@ -234,47 +251,75 @@ mongoose.connect(uri, { dbName: 'teachers' })
         }
 
         const emailedTo = [];
+        const failedEmails = [];
 
         for (const sub of substituteTeachers) {
-            const acceptedSubject = allowAny
-            ? (sub.timetable.find(slot => slot.batch === batch)?.subject || subject)
-            : subject;
+            try {
+                const acceptedSubject = allowAny
+                    ? (sub.timetable.find(slot => slot.batch === batch)?.subject || subject)
+                    : subject;
 
-            const newRequest = new Request({
-            teacher: teacherName,
-            substitute: sub.name,
-            date,
-            time,
-            batch,
-            subject,
-            acceptedSubject,
-            status: 'pending',
-            requestedBy: teacherName
-            });
-            await newRequest.save();
+                const newRequest = new Request({
+                    teacher: teacherName,
+                    substitute: sub.name,
+                    date,
+                    time,
+                    batch,
+                    subject,
+                    acceptedSubject,
+                    status: 'pending',
+                    requestedBy: teacherName
+                });
+                await newRequest.save();
 
-            const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
-            const acceptLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/accept`;
-            const denyLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/deny`;
+                const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
+                const acceptLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/accept`;
+                const denyLink = `${baseUrl}/respond-email/${sub.name}/${teacherName}/${date}/${time}/${batch}/${subject}/deny`;
 
 
-            await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to: sub.email,
-            subject: `Substitution Request`,
-            html: `<p>${teacherName} requested a substitution on ${date} at ${time} for ${batch} (Subject: ${subject}).</p>
-                    <p><a href="${acceptLink}">Accept</a> | <a href="${denyLink}">Decline</a></p>`
-            });
+                await transporter.sendMail({
+                    from: process.env.EMAIL_USER,
+                    to: sub.email,
+                    subject: `Substitution Request`,
+                    html: `<p>${teacherName} requested a substitution on ${date} at ${time} for ${batch} (Subject: ${subject}).</p>
+                            <p><a href="${acceptLink}">Accept</a> | <a href="${denyLink}">Decline</a></p>`
+                });
 
-            emailedTo.push(sub.name);
+                emailedTo.push(sub.name);
+            } catch (err) {
+                console.error(`Failed to send email to ${sub.name}:`, err);
+                failedEmails.push({ teacher: sub.name, error: err.message });
+            }
         }
 
-        return res.json({ success: true, message: "Substitution requests sent.", emailedTo });
-        });
+        let message = "Substitution requests sent.";
+        if (failedEmails.length > 0) {
+            message += ` However, failed to send emails to: ${failedEmails.map(f => f.teacher).join(', ')}`;
+        }
 
+        return res.json({ 
+            success: true, 
+            message, 
+            emailedTo,
+            failedEmails 
+        });
+    });
 
     app.get('/respond-email/:sub/:org/:date/:time/:batch/:subject/:action', async (req, res) => {
         const { sub, org, date, time, batch, subject, action } = req.params;
+
+        // Check if already accepted by someone
+        const existingAccepted = await SubstitutionHistory.findOne({
+            teacher: org,
+            date,
+            time,
+            batch,
+            subject
+        });
+
+        if (existingAccepted) {
+            return res.send(`This substitution request has already been accepted by ${existingAccepted.substitute}`);
+        }
 
         const reqDoc = await Request.findOne({
             teacher: org,
